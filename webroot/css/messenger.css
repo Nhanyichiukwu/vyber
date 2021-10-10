@@ -1,0 +1,81 @@
+.conversation {
+    background-color: rgba(222, 222, 222, 0.2901960784313726);
+    height: 460px;
+    padding: 20px;
+}
+.Of-Y_a {
+    
+}
+.Of-X_h {
+    
+}
+.thread {
+    margin: 0;
+    padding: 0;
+}
+ul.thread {
+    list-style: none;
+}
+ul.thread li {
+    margin-bottom: 20px;
+}
+
+.thread .msg .msg-wrapper * {
+    display: inline-block !important;
+}
+.msg .msg-wrapper .avatar {
+    width: 50px;
+    height: 50px;
+    vertical-align: top;
+}
+
+.thread .msg .msg-wrapper .msg-text {
+    padding: 10px 15px;
+    border-radius: 30px;
+    display: inline-block;
+    text-align: left !important;
+    max-width: 87.3%;
+    vertical-align: middle;
+}
+.msg.primary .msg-wrapper {
+    text-align: right;
+    align-items: right;
+    padding-left: 20%;
+}
+.msg.primary .msg-wrapper .avatar {
+    /*float: right;*/
+    margin-left: 10px;
+}
+.msg.primary .msg-wrapper .msg-text {
+    background-color: bisque;
+    /*margin-right: 65px;*/
+}
+.msg.secondary .msg-wrapper {
+    padding-right: 20%;
+    text-align: left;
+    align-items: left;
+}
+.msg.secondary .msg-wrapper .avatar {
+    /*float: left;*/
+    margin-right: 10px;
+}
+.msg.secondary .msg-wrapper .msg-text {
+    background-color: bisque;
+    /*margin-left: 65px;*/
+}
+.msg-input {
+    
+}
+.msg-input {
+    height: auto !important;
+    min-height: 45px !important;
+    border-radius: 25px !important;
+    margin-right: 3.3rem !important;
+    text-align: start !important;
+    background-color: #f3f3f2 !important;
+    line-height: 16px !important;
+}
+.msg-send-btn {
+    width: 45px !important;
+    height: 45px !important;
+}

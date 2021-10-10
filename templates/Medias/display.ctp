@@ -1,0 +1,6 @@
+<?php
+
+/**
+ * Dynamic file renderer
+ */
+?>

@@ -1,0 +1,49 @@
+/*
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+*/
+/*
+    Created on : Jan 29, 2019, 4:39:44 AM
+    Author     : Hopeson
+*/
+
+/** Box Heights **/
+.hUG-ewljl {
+    height: 8rem;
+    max-height: 16rem;
+}
+.h0LT_Ehfh {
+    height: 12rem;
+    max-height: 12rem;
+}
+.hjK_rhTep {
+    height: 20rem;
+    max-height: 20rem;
+}
+.tlb .nav-link {
+    padding: 1rem !important;
+}
+
+.uv0FH4 .custom-checkbox .custom-control-label::before,
+.custom-checkbox .uv0FH4.custom-control-label::before{
+    border-radius: 20px;
+}
+/*.nav-tabs .nav-link.active {
+    border-color: #e0e3ef;
+    color: #467fcf;
+    background: linear-gradient(to right, transparent, #6574cd1f 60%);
+    box-shadow: inset -7px 0 0 #467fcf;
+}*/
+
+.avatar-xl .avatar-status {
+    right: 4px !important;
+    bottom: 4px !important;
+}
+
+
+.btn-sm, .btn-group-sm > .btn {
+    font-size: 0.7rem !important;
+    min-width: 1.8rem !important;
+    padding: 0.2rem 0.3rem !important;
+}
