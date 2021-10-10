@@ -4,12 +4,13 @@ use Cake\Core\Configure;
 use Cake\Routing\Router;
 
 ?>
-<div class="py-5">
+<div class="py-5 col-md-4 col-lg-5 mx-auto">
     <div class="card">
         <div class="card-body p-5">
             <h3 class="login-box-msg">Register</h3>
 
             <?= $this->Form->create(null, ['url' => 'register']) ?>
+            <?php $this->Form->unlockField('accept_terms'); ?>
             <div class="form-group form-group-lg">
                 <div class="input-group mb-3">
                     <div class="input-group-prepend">
@@ -85,7 +86,7 @@ use Cake\Routing\Router;
             </div>
             <!-- /.col -->
             <div class="form-button-group">
-                <button type="submit" class="btn btn-primary btn-block">Get Started</button>
+                <button type="submit" class="btn btn-app btn-block">Get Started</button>
             </div>
             <?= $this->Form->end() ?>
         </div>

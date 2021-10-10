@@ -11,7 +11,7 @@ $startingPhrase = [
     'email' => 'A mail'
 ];
 ?>
-<div class="login-box">
+<div class="login-box col-md-5 col-lg-4 mx-auto">
     <?= $this->Form->create(null) ?>
     <?php
     $this->Form->unlockField('verification_code');

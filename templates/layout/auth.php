@@ -23,12 +23,12 @@ if ($hasFooter) {
 <head>
     <?= $this->element('LayoutElements/head'); ?>
 </head>
-<body class="mobile-layout theme-bg-gradient<?= $controlClasses ?>"
+<body class="default mobile-layout theme-bg-gradient<?= $controlClasses ?>"
       data-app-user=""
       data-base-uri="<?= $baseUri ?>">
 <x-vibely-app-container
     id="app-container"
-    class="_viG app-container clearfix foa3ulpk d-block w-100 h-100 o-hidden">
+    class="_viG app-container clearfix foa3ulpk d-block w-100 o-hidden">
     <?php if ($this->fetch('notice')): ?>
         <x-vibely-noticeboard>
             <?= $this->fetch('notice'); ?>

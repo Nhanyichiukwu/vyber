@@ -28,7 +28,7 @@ if ($hasFooter) {
       data-base-uri="<?= $baseUri ?>">
 <x-vibely-app-container
     id="app-container"
-    class="_viG app-container clearfix foa3ulpk d-block w-100 h-100 o-hidden">
+    class="_viG app-container clearfix foa3ulpk d-block w-100 o-hidden">
     <?php if ($this->fetch('notice')): ?>
         <x-vibely-noticeboard>
             <?= $this->fetch('notice'); ?>
@@ -50,10 +50,10 @@ if ($hasFooter) {
             <?= $this->fetch('page_header') ?>
         <?php endif; ?>
         <?= $this->fetch('content') ?>
-        <?=
-        mb_strtolower(
-            RandomString::generateString(8,'mixed', 'alpha')
-        );
+        <?php
+//        mb_strtolower(
+//            RandomString::generateString(8,'mixed', 'alpha')
+//        );
         ?>
     </main>
     <!-- /Main Content -->

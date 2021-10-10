@@ -26,7 +26,7 @@ class ContactVerificationController extends AppController
     {
         parent::beforeFilter($event);
 
-//        $this->viewBuilder()->setLayout('blank');
+        $this->viewBuilder()->setLayout('blank');
         $this->Auth->allow();
     }
 

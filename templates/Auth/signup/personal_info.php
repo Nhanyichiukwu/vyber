@@ -6,11 +6,15 @@
 use Cake\Routing\Router;
 
 ?>
-<div class="py-5">
+<div class="col-lg-5 col-md-8 mb-5 mx-auto py-5">
     <div class="card mmhtpn7c">
         <div class="card-body login-card-body">
             <?= $this->Flash->render(); ?>
             <?= $this->Form->create() ?>
+            <?php
+            $this->Form->unlockField('confirm_password');
+            ?>
+
             <div class="form-group form-group-lg">
                 <div class="input-group mb-3">
                     <input type="text" class="border-bottom border-top-0 form-control-plaintext
@@ -60,24 +64,17 @@ use Cake\Routing\Router;
             </div>
             <div class="form-group">
                 <h6>Gender:</h6>
-                    <div class="d-none"><input type="hidden" name="gender" value=""></div>
-                    <div class="custom-control custom-radio">
-                        <input class="custom-control-input" type="radio" id="male" name="gender"
-                               value="male"<?= isset($credentials['gender']) && $credentials['gender'] === 'male' ? ' checked' : '' ?>>
-                        <label for="male" class="custom-control-label">Male</label>
-                    </div>
-                    <div class="custom-control custom-radio">
-                        <input class="custom-control-input" type="radio" id="female" name="gender"
-                               value="female"<?= isset($credentials['gender']) && $credentials['gender'] === 'female'
-                            ? ' checked' : '' ?>>
-                        <label for="female" class="custom-control-label">Female</label>
-                    </div>
-                    <div class="custom-control custom-radio">
-                        <input class="custom-control-input" type="radio" id="other" name="gender"
-                               value="other"<?= isset($credentials['gender']) && $credentials['gender'] === 'other' ?
-                            ' checked' : '' ?>>
-                        <label for="other" class="custom-control-label">Other</label>
-                    </div>
+                <input type="hidden" name="gender" value="">
+                <?= $this->Form->select('gender',
+                    [
+                        'male' => 'Male',
+                        'female' => 'Female',
+                        'other' => 'Other',
+                        'prefer_not_to_say' => 'Prefer not to say'
+                    ],
+                    [
+                        'class' => 'form-select form-select-sm bg-transparent text-white-200'
+                    ]); ?>
                 <?php if (isset($errors['gender'])): ?>
                     <span class="invalid-feedback" role="alert">
                         <?php foreach ($errors['gender'] as $key => $error): ?>
@@ -200,7 +197,7 @@ use Cake\Routing\Router;
                 <?php endif; ?>
             </div>
             <div class="mb-3">
-                <button type="submit" class="btn btn-azure btn-block btn-lg btn-pill">Go Vibely</button>
+                <button type="submit" class="btn btn-app btn-block btn-lg btn-pill">Go Vibely</button>
             </div>
             <?= $this->Form->end() ?>
         </div>
