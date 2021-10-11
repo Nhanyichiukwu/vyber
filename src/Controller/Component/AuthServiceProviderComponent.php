@@ -4,10 +4,13 @@ declare(strict_types=1);
 namespace App\Controller\Component;
 
 use App\Model\Entity\User;
+use App\Model\Table\UsersTable;
 use Cake\Auth\DefaultPasswordHasher;
 use Cake\Controller\Component;
 use Cake\Core\Exception\Exception;
+use Cake\Dataource\EntityInterface;
 use Cake\Http\Cookie\Cookie;
+use Cake\Http\Response;
 use Cake\I18n\Date;
 use Cake\ORM\Locator\TableLocator;
 use Cake\Validation\Validation;
@@ -16,7 +19,7 @@ use Cake\Validation\Validation;
  * AuthServiceProvider component
  *
  * @property Component\AuthComponent $Auth
- * @property \App\Model\Table\UsersTable $Users
+ * @property UsersTable $Users
  */
 class AuthServiceProviderComponent extends Component
 {
@@ -68,7 +71,7 @@ class AuthServiceProviderComponent extends Component
     public $components = ['Auth','GuestsManager'];
 
     /**
-     * @var User|array|\Cake\Dataource\EntityInterface|null
+     * @var User|array|EntityInterface|null
      */
     protected $_authenticatedUser;
 
@@ -95,7 +98,7 @@ class AuthServiceProviderComponent extends Component
 
     /**
      * @param array $requiredFields
-     * @return bool|\Cake\Http\Response|null
+     * @return bool|Response|null
      */
     public function authenticate(array $requiredFields = [])
     {
@@ -327,7 +330,7 @@ class AuthServiceProviderComponent extends Component
      * @param string $password
      * @return User|bool
      */
-    protected function _identifyUserByUsernameAndPassword(string $username, string $password): ?User
+    protected function _identifyUserByUsernameAndPassword(string $username, string $password)
     {
         $user = $this->_identifyUserByUsername($username);
 
@@ -342,7 +345,7 @@ class AuthServiceProviderComponent extends Component
 
     /**
      * @param string $username
-     * @return bool|User|\Cake\Dataource\EntityInterface
+     * @return bool|User|EntityInterface
      */
     protected function _identifyUserByUsername(string $username)
     {
@@ -357,7 +360,7 @@ class AuthServiceProviderComponent extends Component
     /**
      * Get the details of the user that was just authenticated
      *
-     * @return User|array|\Cake\Dataource\EntityInterface|null
+     * @return User|array|EntityInterface|null
      */
     public function getAuthenticatedUser()
     {
@@ -690,7 +693,7 @@ class AuthServiceProviderComponent extends Component
     }
 
     /**
-     * @return bool|\Cake\Http\Response|null
+     * @return bool|Response|null
      */
     private function __segmentAuthenticate()
     {

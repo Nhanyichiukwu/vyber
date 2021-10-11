@@ -1,12 +1,13 @@
 <?php
 
 /**
-  * @var \App\View\AppView $this
-  */
+ * @var AppView $this
+ */
 
+use App\View\AppView;
 use Cake\Routing\Router; ?>
 <div class="card mb-3 mmhtpn7c">
-    <div class="card-body p-4">
+    <div class="card-body p-5">
         <?= $this->Flash->render(); ?>
         <?= $this->Form->create(null, ['class' => 'login-form']) ?>
         <?php
@@ -15,14 +16,15 @@ use Cake\Routing\Router; ?>
         $this->Form->unlockField('password');
         $this->Form->unlockField('remember_me');
         ?>
-        <div class="form-group mb-3">
-            <div class="bg-light input-group input-group-alternative input-group-merge">
+        <div class="form-group mb-1">
+            <div class="bg-light ebhwdzhs input-group input-group-alternative input-group-merge">
                 <div class="input-group-prepend">
-                    <span class="bg-transparent border-0 c-grey-700 input-group-text rounded-0"><i class="mdi mdi-account"></i></span>
+                    <span class="bg-transparent border-0 c-grey-700 input-group-text rounded-0"><i
+                            class="mdi mdi-account"></i></span>
                 </div>
                 <input type="text"
-                       class="bg-transparent border-0 form-control px-0
-                           form-control-plaintext rounded-0 shadow-none<?= (
+                       class="bg-transparent border-0 form-control
+                           form-control-plaintext rounded-0 shadow-none jafwiekn<?= (
                        isset($errors['email'])
                            ? ' is-invalid'
                            : ''
@@ -40,15 +42,15 @@ use Cake\Routing\Router; ?>
             <?php endif; ?>
         </div>
         <div class="form-group">
-            <div class="bg-light input-group input-group-alternative input-group-merge">
+            <div class="bg-light input-group input-group-alternative input-group-merge y2j0mtlk">
                 <div class="input-group-prepend">
                         <span class="bg-transparent border-0 c-grey-700 input-group-text rounded-0">
                             <i class="mdi mdi-key"></i>
                         </span>
                 </div>
                 <input type="password"
-                       class="bg-transparent border-0 form-control px-0
-                           form-control-plaintext rounded-0 shadow-none
+                       class="bg-transparent border-0 form-control
+                           form-control-plaintext rounded-0 shadow-none cjtziucd
                            <?= (isset($errors['password']) ? ' is-invalid' : '') ?>"
                        name="password"
                        value="<?= $login['password'] ?? '' ?>" required autocomplete="password" autofocus
@@ -75,7 +77,7 @@ use Cake\Routing\Router; ?>
             </div>
         </div>
         <div class="text-center">
-            <button type="submit" class="btn btn-block btn-yellow mmhtpn7c">Sign in</button>
+            <button type="submit" class="btn btn-block btn-app mmhtpn7c">Sign in</button>
         </div>
         <?= $this->Form->end() ?>
     </div>
