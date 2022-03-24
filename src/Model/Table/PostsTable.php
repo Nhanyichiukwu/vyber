@@ -3,13 +3,16 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use App\Model\Behavior\CommonBehavior;
 use App\Model\Entity\Post;
+use App\Model\Entity\User;
 use Cake\Datasource\EntityInterface;
 use Cake\Datasource\Exception\InvalidPrimaryKeyException;
 use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\ORM\Query;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
+use Cake\Validation\Validation;
 use Cake\Validation\Validator;
 use Cake\Collection\Collection;
 use Cake\Database\Exception as DbException;
@@ -26,10 +29,11 @@ use Cake\Database\Exception as DbException;
  * @method \App\Model\Entity\Post findOrCreate($search, callable $callback = null, $options = [])
  *
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
+ * @mixin CommonBehavior
  */
 class PostsTable extends Table
 {
-    protected $_containments = [
+    protected $_relationships = [
         'Authors' => ['Profiles'], // Each post contains details of the author and their profile
         'OriginalAuthors' => ['Profiles'], // Each post (where available) contains information about the original author
         'OriginalPosts' => ['Authors' => ['Profiles']],
@@ -301,6 +305,61 @@ class PostsTable extends Table
         return $rules;
     }
 
+    public function findRecent(Query $query, array $options = null)
+    {
+        $query = $query
+            ->where(['Posts.status' => 'published'])
+            ->orderDesc('Posts.date_published');
+        if (isset($options['author'])) {
+            $author = $options['author'];
+            if (is_string($author) && $author !== 'any') {
+                $query = $query->where(['Posts.author_refid' => $author]);
+            } elseif ($author instanceof User) {
+                $query = $query->where(['Posts.author_refid' => $author->refid]);
+            }
+        }
+        if (!count($query->getContain())) {
+            $query = $query->contain($this->_relationships);
+        }
+        
+        $query = $this->dateFormat($query, 'Posts.date_published');
+        return $query;
+    }
+    
+    /**
+     * 
+     * @param Query $query
+     * @param array $options
+     * @return Query
+     */
+    public function findBasicThreads(Query $query, array $options): Query
+    {
+        $user = $options['user'];
+        $userID = $user instanceof User ? $user->refid : $user;
+        
+        /** @var \App\Model\Table\UsersTable $AuthorsAssoc **/
+        $AuthorsAssoc = $this->getAssociation('Authors')
+                ->getTarget()
+                ->setAlias('Users');
+        $feedSources = $AuthorsAssoc->find('userFeedSources', ['user' => $userID]);
+        
+        $query = $query->where([
+                            'OR' => [
+                                'Posts.author_refid IN' => $feedSources,
+                                'Posts.author_refid' => $userID
+                            ]
+                        ])
+                        ->contain($this->_relationships);
+        return $this->dateFormat($query, 'Posts.date_published');
+    }
+    
+    
+    public function findLiveThreads(Query $query, array $options = []) {
+        
+        
+        return $query;
+    }
+
     /**
      * Returns a list of posts as thread in a parent-children hierarchy
      *
@@ -320,7 +379,7 @@ class PostsTable extends Table
 //        ]);
         $query = $this->find('all')
                 ->whereNull('Posts.replying_to')
-                ->contain($this->_containments);
+                ->contain($this->_relationships);
 
         if ($conditions) {
             $query = $query->andWhere($conditions);
@@ -330,7 +389,7 @@ class PostsTable extends Table
         return $query;
     }
 
-    public function filterByAuthor(\App\Model\Entity\User $actor, Query $query, string $author, $newsSources)
+    public function filterByAuthor(User $actor, Query $query, string $author, $newsSources)
     {
         if ($author === 'anyone') {
             $newsSources[] = $actor->refid; // Then include the actor's posts as well
@@ -358,7 +417,7 @@ class PostsTable extends Table
      * @param type $date
      * @return Query
      */
-    public function filterByDate(\App\Model\Entity\User $actor, Query $query, $date)
+    public function filterByDate(User $actor, Query $query, $date)
     {
         $newsSources = (array) $this->getNewsSources($actor->get('refid'));
         $newsSources[] = $actor->refid; // Then include the actor posts as well
@@ -372,8 +431,10 @@ class PostsTable extends Table
         return $query;
     }
 
-    public function filterByRelevance(\App\Model\Entity\User $author, Query $query) {
+    public function filterByRelevance(Query $query, array $options)
+    {
 
+        return $query;
     }
 
 
@@ -392,27 +453,35 @@ class PostsTable extends Table
      *
      * @param Query $query
      * @param string|object $author
-     * @return \Cake\ORM\ResultSet
+     * @return Query
      */
     public function findByAuthor(Query $query, array $options)
     {
         $author = $options['author'];
+
         if (is_string($author)) {
             $authorID = $author;
-        } elseif ($author instanceof \App\Model\Entity\User) {
+        } elseif ($author instanceof User) {
             $authorID = $author->refid;
         } else {
-            throw new \InvalidArgumentException();
+            $msg = 'Posts::findByAuthor() requires the author option ' .
+                'provided in the $options argument to be either of type string ' .
+                'or object of the User entity.';
+            throw new \InvalidArgumentException($msg);
         }
-        $query->where(['Posts.author_refid' => $authorID, 'Posts.replying_to IS NULL'])
-                ->contain($this->_containments);
+        $query = $query
+            ->where(['Posts.author_refid' => $authorID]);
+        if (!count($query->getContain())) {
+            $query = $query->contain($this->_relationships);
+        }
+//        $result = $query->map(function ($row) {
+//            $row->set('comments', $this->getDescendants($row->refid));
+//            return $row;
+//        });
+//        $query = $this->findThreaded($query, []);
         $query = $this->dateFormat($query, 'Posts.date_published');
-        $result = $query->map(function ($row) {
-            $row->set('comments', $this->getDescendants($row->refid));
-            return $row;
-        });
 
-        return $result;
+        return $query;
     }
 
     /**
@@ -429,7 +498,7 @@ class PostsTable extends Table
     {
         $options = [
             'conditions' => ['Posts.refid' => $refid],
-            'contain' => $this->_containments
+            'contain' => $this->_relationships
         ];
         if (!empty($conditions)) {
             $options['conditions'] = array_merge($options['conditions'], $conditions);
@@ -457,7 +526,7 @@ class PostsTable extends Table
     public function get($primaryKey, array $options = []): EntityInterface
     {
         if (!isset($options['contain'])) {
-            $options['contain'] = $this->_containments;
+            $options['contain'] = $this->_relationships;
         }
         try {
             $post = parent::get($primaryKey, $options);
@@ -479,7 +548,7 @@ class PostsTable extends Table
     public function getDescendants(string $parent)
     {
         $query = $this->find()
-                ->contain($this->_containments)
+                ->contain($this->_relationships)
                 ->where(['Posts.replying_to' => $parent]);
         $query = $this->dateFormat($query, 'Posts.date_published');
         $query = $query->orderAsc('Posts.id');
@@ -508,7 +577,8 @@ class PostsTable extends Table
         return $parent;
     }
 
-    public function containParents(array $children) {
+    public function containParents(array $children) 
+    {
         $collection = new Collection($children);
         $children = $collection->each(function ($child) {
             if (!$child->isEmpty('replying_to')) {
@@ -519,4 +589,5 @@ class PostsTable extends Table
 
         return $children->toArray();
     }
+    
 }

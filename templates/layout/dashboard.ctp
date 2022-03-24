@@ -37,8 +37,8 @@ if (isset($pageTitle)) {
         <?= $this->Html->css('bootstrap.dashboard'); ?>
         <?= $this->Html->css('materialdesignicons.min'); ?>
         <?= $this->Html->css('custom'); ?>
-        <?= $this->Html->css('themes/default.theme'); ?>
-        <?= $this->Html->css('themes/custom.theme'); ?>
+        <?= $this->Html->css('accents/default.theme'); ?>
+        <?= $this->Html->css('accents/custom.theme'); ?>
 
         <style>
             #loader {
@@ -96,7 +96,7 @@ if (isset($pageTitle)) {
         <?= $this->Html->css('vendor/sprint/sprint.bootstrap.min'); ?>
         <?= $this->Html->css('bootstrap.dashboard'); ?>
         <?= $this->Html->css('bootstrap-override'); ?>
-        <?= $this->Html->css('themes/' . $theme); ?>
+        <?= $this->Html->css('accents/' . $theme); ?>
         <?= $this->Html->css('custom'); ?>
 
         <?= $this->fetch('css'); ?>

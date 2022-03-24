@@ -41,12 +41,11 @@ class AppTable extends Table {
     {
         $query = $query->where(function (QueryExpression $exp, Query $q) {
             // Created between now and 4 days back, that has been read
-
             $table = Inflector::camelize($this->getTable());
             return $exp->between(
                 "$table.created",
                 new \DateTime('now'),
-                new \DateTime('-30 days')
+                new \DateTime('-4 days')
             );
         });
 

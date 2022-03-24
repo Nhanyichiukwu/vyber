@@ -68,8 +68,8 @@ class IndustriesTable extends Table
         $this->hasMany('TalentHub', [
             'foreignKey' => 'industry_id',
         ]);
-        $this->hasMany('UserIndustries', [
-            'foreignKey' => 'industry_id',
+        $this->belongsToMany('Profiles', [
+            'joinTable' => 'profiles_industries'
         ]);
     }
 
@@ -117,5 +117,10 @@ class IndustriesTable extends Table
         $rules->add($rules->existsIn(['parent_id'], 'ParentIndustries'), ['errorField' => 'parent_id']);
 
         return $rules;
+    }
+
+    public function findByName(string $name)
+    {
+        return $this->find('all')->where(['name' => $name]);
     }
 }

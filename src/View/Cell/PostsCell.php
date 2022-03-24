@@ -65,7 +65,7 @@ class PostsCell extends Cell
     public function timeline($actor)
     {
         $newsfeed = new NewsfeedComponent($this->_componentRegistry);
-        $posts = $newsfeed->getTimeline($actor);
+        $posts = $newsfeed->fetchAllFor($actor);
 
         $posts = $posts->orderDesc('Posts.id');
         $paginator = new Paginator();

@@ -72,7 +72,7 @@ feature.formdata = window.FormData !== undefined;
 var hasProp = !!$.fn.prop;
 
 // attr2 uses prop when it can but checks the return type for
-// an expected string.  this accounts for the case where a form 
+// an expected string.  this accounts for the case where a form
 // contains inputs with names like "action" or "method"; in those
 // cases "prop" returns the element
 $.fn.attr2 = function() {
@@ -284,7 +284,7 @@ $.fn.ajaxSubmit = function(options) {
         return result;
     }
 
-     // XMLHttpRequest Level 2 file uploads (big hat tip to francois2metz)
+     // XMLHttpRequest Level 2 file public-files (big hat tip to francois2metz)
     function fileUploadXhr(a) {
         var formdata = new FormData();
 
@@ -346,7 +346,7 @@ $.fn.ajaxSubmit = function(options) {
         return $.ajax(s);
     }
 
-    // private function for handling file uploads (hat tip to YAHOO!)
+    // private function for handling file public-files (hat tip to YAHOO!)
     function fileUploadIframe(a) {
         var form = $form[0], el, i, s, g, id, $io, io, xhr, sub, n, timedOut, timeoutHandle;
         var deferred = $.Deferred();
@@ -461,7 +461,7 @@ $.fn.ajaxSubmit = function(options) {
 
         var CLIENT_TIMEOUT_ABORT = 1;
         var SERVER_ABORT = 2;
-                
+
         function getDoc(frame) {
             /* it looks like contentWindow or contentDocument do not
              * carry the protocol property in ie8, when running under ssl
@@ -469,9 +469,9 @@ $.fn.ajaxSubmit = function(options) {
              * the protocol is know but not on the other two objects. strange?
              * "Same origin policy" http://en.wikipedia.org/wiki/Same_origin_policy
              */
-            
+
             var doc = null;
-            
+
             // IE8 cascading access check
             try {
                 if (frame.contentWindow) {
@@ -507,8 +507,8 @@ $.fn.ajaxSubmit = function(options) {
         // take a breath so that pending repaints get some cpu time before the upload starts
         function doSubmit() {
             // make sure form attrs are set
-            var t = $form.attr2('target'), 
-                a = $form.attr2('action'), 
+            var t = $form.attr2('target'),
+                a = $form.attr2('action'),
                 mp = 'multipart/form-data',
                 et = $form.attr('enctype') || $form.attr('encoding') || mp;
 
@@ -619,7 +619,7 @@ $.fn.ajaxSubmit = function(options) {
             if (xhr.aborted || callbackProcessed) {
                 return;
             }
-            
+
             doc = getDoc(io);
             if(!doc) {
                 log('cannot access response document');

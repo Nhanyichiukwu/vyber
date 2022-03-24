@@ -1,6 +1,9 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Model\Table;
 
+use Cake\Database\Expression\QueryExpression;
 use Cake\ORM\Query;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -9,20 +12,27 @@ use Cake\Validation\Validator;
 /**
  * Medias Model
  *
- * @method \App\Model\Entity\Media get($primaryKey, $options = [])
- * @method \App\Model\Entity\Media newEntity($data = null, array $options = [])
+ * @property \App\Model\Table\EntertainmentTypesTable&\Cake\ORM\Association\BelongsTo $EntertainmentTypes
+ * @property \App\Model\Table\GroupsTable&\Cake\ORM\Association\BelongsToMany $Groups
+ *
+ * @method \App\Model\Entity\Media newEmptyEntity()
+ * @method \App\Model\Entity\Media newEntity(array $data, array $options = [])
  * @method \App\Model\Entity\Media[] newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\Media|bool save(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\Media|bool saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Media get($primaryKey, $options = [])
+ * @method \App\Model\Entity\Media findOrCreate($search, ?callable $callback = null, $options = [])
  * @method \App\Model\Entity\Media patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method \App\Model\Entity\Media[] patchEntities($entities, array $data, array $options = [])
- * @method \App\Model\Entity\Media findOrCreate($search, callable $callback = null, $options = [])
+ * @method \App\Model\Entity\Media[] patchEntities(iterable $entities, array $data, array $options = [])
+ * @method \App\Model\Entity\Media|false save(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Media saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Media[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Media[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Media[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Media[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
  *
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
 class MediasTable extends Table
 {
-
     /**
      * Initialize method
      *
@@ -34,7 +44,7 @@ class MediasTable extends Table
         parent::initialize($config);
 
         $this->setTable('medias');
-        $this->setDisplayField('refid');
+        $this->setDisplayField('title');
         $this->setPrimaryKey('refid');
 
         $this->addBehavior('Timestamp');
@@ -44,12 +54,10 @@ class MediasTable extends Table
             'joinType' => 'INNER',
             'className' => 'Users'
         ]);
-
         $this->belongsTo('Albums', [
             'foreignKey' => 'album_refid',
             'joinType' => 'LEFT'
         ]);
-
         $this->belongsTo('Genres', [
             'foreignKey' => 'genre_refid',
             'joinType' => 'LEFT'
@@ -68,6 +76,14 @@ class MediasTable extends Table
             'joinType' => 'LEFT',
             'className' => 'Medias'
         ]);
+        $this->belongsTo('EntertainmentTypes', [
+            'foreignKey' => 'entertainment_type_id',
+        ]);
+        $this->belongsToMany('Groups', [
+            'foreignKey' => 'media_id',
+            'targetForeignKey' => 'group_id',
+            'joinTable' => 'groups_medias',
+        ]);
     }
 
     /**
@@ -80,25 +96,25 @@ class MediasTable extends Table
     {
         $validator
             ->nonNegativeInteger('id')
-            ->allowEmptyString('id');
+            ->allowEmptyString('id', null, 'create');
 
         $validator
             ->scalar('refid')
             ->maxLength('refid', 20)
             ->requirePresence('refid', 'create')
-            ->allowEmptyString('refid', null);
+            ->notEmptyString('refid');
 
         $validator
             ->scalar('title')
             ->maxLength('title', 255)
             ->requirePresence('title', 'create')
-            ->allowEmptyString('title', null);
+            ->notEmptyString('title');
 
         $validator
             ->scalar('slug')
             ->maxLength('slug', 255)
             ->requirePresence('slug', 'create')
-            ->allowEmptyString('slug', null);
+            ->notEmptyString('slug');
 
         $validator
             ->scalar('description')
@@ -119,7 +135,7 @@ class MediasTable extends Table
             ->scalar('author_refid')
             ->maxLength('author_refid', 20)
             ->requirePresence('author_refid', 'create')
-            ->allowEmptyString('author_refid', null);
+            ->notEmptyString('author_refid');
 
         $validator
             ->scalar('genre_refid')
@@ -143,29 +159,18 @@ class MediasTable extends Table
             ->scalar('file_path')
             ->maxLength('file_path', 255)
             ->requirePresence('file_path', 'create')
-            ->allowEmptyFile('file_path', null);
-
-        $validator
-            ->scalar('permalink')
-            ->maxLength('permalink', 255)
-            ->requirePresence('permalink', 'create')
-            ->allowEmptyFile('permalink', null);
+            ->notEmptyFile('file_path');
 
         $validator
             ->scalar('file_mime')
             ->maxLength('file_mime', 45)
             ->requirePresence('file_mime', 'create')
-            ->allowEmptyFile('file_mime', null);
+            ->notEmptyString('file_mime');
 
         $validator
             ->scalar('media_type')
             ->requirePresence('media_type', 'create')
-            ->allowEmptyString('media_type', null);
-
-        $validator
-            ->scalar('classification')
-            ->maxLength('classification', 100)
-            ->allowEmptyString('classification');
+            ->notEmptyString('media_type');
 
         $validator
             ->scalar('target_audience')
@@ -238,6 +243,19 @@ class MediasTable extends Table
         return $validator;
     }
 
+    /**
+     * Returns a rules checker object that will be used for validating
+     * application integrity.
+     *
+     * @param \Cake\ORM\RulesChecker $rules The rules object to be modified.
+     * @return \Cake\ORM\RulesChecker
+     */
+    public function buildRules(RulesChecker $rules): RulesChecker
+    {
+        $rules->add($rules->existsIn(['entertainment_type_id'], 'EntertainmentTypes'), ['errorField' => 'entertainment_type_id']);
+
+        return $rules;
+    }
 
     /**
      *
@@ -245,17 +263,65 @@ class MediasTable extends Table
      * @param array $options
      * @return \Cake\ORM\Query
      */
-    public function findByClassification(Query $query, array $options = [])
+    public function findByEntertainmentType(Query $query, array $options = [])
     {
-        $classification = $options['classification'];
-        return $query->where([
-            'classification' => $classification
-        ]);
+        $entertainmentType = $options['entertainmentType'];
+        if (!empty($options)) {
+            $query = $query->applyOptions($options);
+        }
+        return $query->matching(
+            'EntertainmentTypes',
+            function (Query $q)
+            use ($entertainmentType) {
+                return $q->where([
+                    'EntertainmentTypes.slug' => $entertainmentType
+                ]);
+            }
+        );
     }
 
     public function findByMediaType(Query $query, array $options = [])
     {
         $mediaType = $options['media_type'];
         return $query->where(['media_type' => $mediaType]);
+    }
+
+    public function findPublished(Query $query, array $options = [])
+    {
+        return $query->where(['status' => 'published']);
+    }
+
+    /**
+     *
+     * @param Query $query
+     * @param array $options
+     */
+    public function findByAuthor(Query $query, array $options)
+    {
+        return $query->where(['author_refid' => $options['author']]);
+    }
+
+
+    /**
+     * @param Query $query
+     * @param array $options
+     * @return Query
+     */
+    public function findLatest(Query $query, array $options = [])
+    {
+        $latest = $query->newExpr()->between(
+            'Medias.created',
+            new \DateTime('now'),
+            new \DateTime('-7 days')
+        );
+        $result = $query->select(['latest' => $latest])
+            ->enableAutoFields();
+        return $result;
+    }
+
+    public function findTop(Query $query, array $options = [])
+    {
+
+        return $query;
     }
 }

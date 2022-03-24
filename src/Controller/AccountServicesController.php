@@ -38,7 +38,7 @@ class AccountServicesController extends AppController
         $this->Auth->allow();
     }
 
-//    public function beforeFilter(Event $event) {
+//    public function beforeFilter(Events $event) {
 //
 //    }
 

@@ -22,7 +22,7 @@ $options = [
     'colSize' => 6
 ];
 $this->set('options', $options);
-$this->set('page_title', ucfirst($page));
+$this->pageTitle('Artists');
 
 $genres = json_decode($this->cell('ContentLoader::list', [
     'genres', [
@@ -43,42 +43,46 @@ $roles = json_decode($this->cell('ContentLoader::list', [
     ]
 ])->render(), false);
 ?>
+
+<?php if (!$this->getRequest()->is('ajax')): ?>
+    <?php $this->enablePageHeader() ?>
+<?php endif; ?>
+
+
 <?php $this->start('page_style'); ?>
 <?= $this->Html->css('atAccordionOrTabs/jquery.atAccordionOrTabs'); ?>
 <?php $this->end(); ?>
-<?php if (!$this->getRequest()->is('ajax')): ?>
-    <?= $this->element('App/page_header'); ?>
-<?php endif; ?>
 <?php if ($trendingArtists > 0): ?>
-    <section class="mb-2 mgriukcz bg-white border-top">
+    <section class="mb-2 bg-white">
         <div class="section-body p-3">
-            <h4 class="section-title mb-5">Trending</h4>
-            <div class="dulmx5k4 flex-nowrap flex-row foa3ulpk mgriukcz n1ft4jmn ofx-auto pl-3 tvdg2pcc">
-                <div class="col-4 col-lg-1 col-md-1 col-sm-2 muilk3da">
+            <h4 class="section-title mb-3">Trending</h4>
+<!--            <div class="dulmx5k4 flex-nowrap flex-row foa3ulpk mgriukcz n1ft4jmn ofx-auto pl-3 tvdg2pcc">-->
+            <div class="flex-nowrap flex-row foa3ulpk gutters-sm mgriukcz ofx-auto pl-3 row">
+                <div class="col-auto muilk3da">
                     <div class="oxemcjsk">
                         <span class="avatar avatar-xxl"
                               style="background-image: url(./demo/faces/female/29.jpg)"></span>
                     </div>
                 </div>
-                <div class="col-4 col-lg-1 col-md-1 col-sm-2 muilk3da">
+                <div class="col-auto muilk3da">
                     <div class="oxemcjsk">
                         <span class="avatar avatar-xxl"
                               style="background-image: url(./demo/faces/female/29.jpg)"></span>
                     </div>
                 </div>
-                <div class="col-4 col-lg-1 col-md-1 col-sm-2 muilk3da">
+                <div class="col-auto muilk3da">
                     <div class="oxemcjsk">
                         <span class="avatar avatar-xxl"
                               style="background-image: url(./demo/faces/female/29.jpg)"></span>
                     </div>
                 </div>
-                <div class="col-4 col-lg-1 col-md-1 col-sm-2 muilk3da">
+                <div class="col-auto muilk3da">
                     <div class="oxemcjsk">
                         <span class="avatar avatar-xxl"
                               style="background-image: url(./demo/faces/female/29.jpg)"></span>
                     </div>
                 </div>
-                <div class="col-4 col-lg-1 col-md-1 col-sm-2 muilk3da">
+                <div class="col-auto muilk3da">
                     <div class="oxemcjsk">
                         <span class="avatar avatar-xxl"
                               style="background-image: url(./demo/faces/female/29.jpg)"></span>
@@ -92,7 +96,7 @@ $roles = json_decode($this->cell('ContentLoader::list', [
         </div>
     </section>
 <?php endif; ?>
-<section class="mb-2 mgriukcz bg-white">
+<section class="mb-2 bg-white">
     <div class="filter-toolbar">
         <div class="container-fluid py-2">
             <?= $this->Form->create(null, ['type' => 'get', 'class' => 'form-block']); ?>
@@ -103,7 +107,7 @@ $roles = json_decode($this->cell('ContentLoader::list', [
                 <div class="col-auto">
                     <select id="artists-category" name="artists_category"
                             class="form-select form-select-sm border-0 ttffipg2"
-                            aria-label=".form-select-sm example">
+                            aria-label="form-select-sm example">
                         <option value="top_artists" <?= isset($get['artists_category'])
                         && $get['artists_category'] === 'top_artists' ? 'selected' : ''?>>Top
                             Artists</option>
@@ -118,13 +122,13 @@ $roles = json_decode($this->cell('ContentLoader::list', [
                 <div class="col-auto">
                     <div class="btns">
                         <button class="btn btn-sm no-focus" type="button"
-                                data-toggle="collapse"
+                                data-bs-toggle="collapse"
                                 aria-expanded="false"
-                                data-target="#filter-pane">Filter <i class="mdi mdi-chevron-down"></i></button>
+                                data-bs-target="#filter-pane">Filter <i class="mdi mdi-chevron-down"></i></button>
                         <button class="btn btn-sm no-focus" type="button"
-                                data-toggle="collapse"
+                                data-bs-toggle="collapse"
                                 aria-expanded="false"
-                                data-target="#sort-pane">Sort <i class="mdi mdi-chevron-down"></i></button>
+                                data-bs-target="#sort-pane">Sort <i class="mdi mdi-chevron-down"></i></button>
                     </div>
                 </div>
             </div>
@@ -134,7 +138,7 @@ $roles = json_decode($this->cell('ContentLoader::list', [
                         <label for="genre" class="lh-sm mb-1 small">Music Genre:</label>
                         <select id="genre" name="genre"
                                 class="form-select form-select-sm kfjlsihm neh5467l"
-                                aria-label=".form-select-sm example">
+                                aria-label="Select Music Genre">
                             <option value="">Genre</option>
                             <?php foreach ($genres as $genre): ?>
                                 <option value="<?= $genre->slug ?>" <?= isset($get['genre'])
@@ -143,10 +147,10 @@ $roles = json_decode($this->cell('ContentLoader::list', [
                         </select>
                     </div>
                     <div class="col-auto">
-                        <label for="role" class="lh-sm mb-1 small">Artists Role:</label>
+                        <label for="role" class="lh-sm mb-1 small">User Role:</label>
                         <select id="role" name="role"
                                 class="form-select form-select-sm kfjlsihm neh5467l"
-                                aria-label=".form-select-sm example">
+                                aria-label="Select User Role">
                             <option value="">Role</option>
                             <?php foreach ($roles as $role): ?>
                                 <option value="<?= $role->slug ?>" <?= isset($get['role'])
@@ -158,7 +162,7 @@ $roles = json_decode($this->cell('ContentLoader::list', [
                         <label for="category" class="lh-sm mb-1 small">Music Category:</label>
                         <select id="category" name="category"
                                 class="form-select form-select-sm kfjlsihm neh5467l"
-                                aria-label=".form-select-sm example">
+                                aria-label="Select Music Category">
                             <option value="">Category</option>
                             <?php foreach ($categories as $category): ?>
                                 <option value="<?= $category->slug ?>" <?= isset($get['category'])
@@ -185,23 +189,29 @@ $roles = json_decode($this->cell('ContentLoader::list', [
         serialize($params)
     );
     $filters = http_build_query($get);
-    $dataSrces = 'ajaxify/users?_u_p=artist';
+    $dataSrc = 'users?_u_p=artist';
     if (!empty($filters)) {
-        $dataSrces .= '&' . $filters;
+        $dataSrc .= '&' . $filters;
     }
-    $dataSrces .= '&_i=' . base64_encode(
+    $dataSrc .= '&_i=' . base64_encode(
             serialize('music')
         );
-    $dataSrces .= '&token=' . $token
+    $dataSrc .= '&token=' . $token;
+
+    $pymk = json_encode([
+        'content' => 'artists',
+        'src' => $dataSrc,
+        'remove_if_no_content' => 'no',
+        'check_for_update' => 'yes',
+        'auto_update' => 'yes',
+        'use_data_prospect' => 'yes',
+        'load_type' => 'overwrite',
+    ]);
     ?>
-    <div class="_Hc0qB9 p-3"
-         data-load-type="r"
-         data-src="<?= $dataSrces ?>"
-         data-rfc="artists"
-         data-su="true"
-         data-limit="24"
-         data-r-ind="false">
-        <?= $this->element('App/loading'); ?>
+    <div data-load-type="async"
+         class="ajaxify mb-n3"
+         data-category="widget" data-config='<?= $pymk ?>'>
+        <?= $this->element('App/loading', ['modifier' => 'py-3']); ?>
     </div>
 </section>
 <?php $this->start('page_script'); ?>

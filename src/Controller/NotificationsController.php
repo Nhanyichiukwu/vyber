@@ -2,6 +2,9 @@
 namespace App\Controller;
 
 use App\Controller\AppController;
+use App\Model\Entity\Notification;
+use Cake\Datasource\ResultSetInterface;
+use Cake\ORM\Query;
 
 /**
  * Notifications Controller
@@ -12,11 +15,11 @@ use App\Controller\AppController;
  */
 class NotificationsController extends AppController
 {
-    public function initialize()
+    public function initialize(): void
     {
         parent::initialize();
 
-        $this->viewBuilder()->setLayout('standard_sidebar');
+//        $this->viewBuilder()->setLayout('standard_sidebar');
     }
 
     /**
@@ -31,27 +34,20 @@ class NotificationsController extends AppController
             $this->viewBuilder()->setLayout('ajax');
         }
         $user = $this->getActiveUser();
+        $timezone = $this->GuestsManager->getGuest()->get('timezone');
+
+
         $notifications = $this->Notifications
             ->find('allForUser', [
-                'for' => $user->get('refid'),
+                'user' => $user->get('refid'),
                 'contain' => [
                     'Initiators' => ['Profiles'],
                     'Users' => ['Profiles']
                 ]
             ]);
-        $notifications = $this->Notifications->categorize($notifications)->all();
 
+        $notifications = (array) $this->Notifications->categorize($notifications);
 
-
-//        $notifications = $notifications->map(function ($row) {
-//                $row->set('subject', $this->getSubject($row));
-//                return $row;
-//            })
-//            ->sortBy('Notifications.id')
-//            ->toArray();
-
-        pr($notifications);
-        exit;
         $this->set(compact('notifications'));
     }
 
@@ -60,47 +56,59 @@ class NotificationsController extends AppController
         $this->paginate = [
             'contain' => []
         ];
-        $result = $this->Notifications
-                ->find('unread', ['user_refid' => $this->getActiveUser()->refid])
-                ->contain(['Initiators','Users'])
-                ->orderDesc('created')
-                ->limit(10); //$this->paginate($this->Notifications);
+        $user = $this->getActiveUser();
+//        $query = $this->Notifications
+//                ->find('betweenTimes', [
+//                    'user' => $this->getActiveUser()->refid
+//                ])
+//                ->contain(['Initiators','Users'])
+//                ->orderDesc('Notifications.created')
+//                ->limit(10);
 
-        $notifications = [];
-        if (! $result->isEmpty()) {
-            $notifications = (array) $result->toArray();
+//        $notifications = $query->filter(function ($row) {
+//            return $row->matches >= 1;
+//        })
+//        ->toArray();
+        $notifications = $this->__fetchRecent($user->refid, true);
+        if ($notifications->count() < 1) {
+            $notifications = $this->__fetchRecent($user->refid);
         }
 
-        $isAjax = $this->getRequest()->is('ajax');
-        if ($isAjax) {
-            $this->viewBuilder()->setLayout('ajax');
-        }
+        $notifications = $notifications->toArray();
 
-        $expectedContentType = $this->getRequest()->getHeaderLine('Content-Type');
-        pr($expectedContentType);
-        exit;
-        if ($expectedContentType === 'json') {
-            $notifications = json_encode($notifications);
-            $response = $this->getResponse()->withStringBody($notifications);
+//        $notifications = [];
+//        if (! $result->isEmpty()) {
+//            $notifications = (array) $result->toArray();
+//        }
 
-            return $response;
-        }
+//        $isAjax = $this->getRequest()->is('ajax');
+//        if ($isAjax) {
+//            $this->viewBuilder()->setLayout('ajax');
+//        }
+//
+//        $expectedContentType = $this->getRequest()->getHeaderLine('Content-Type');
+//
+//        if ($expectedContentType === 'json') {
+//            $notifications = json_encode($notifications);
+//            $response = $this->getResponse()->withStringBody($notifications);
+//
+//            return $response;
+//        }
 
-        $this->set(compact('notifications', 'isAjax'));
+        $this->set(compact('notifications'));
     }
 
     public function read()
     {
         $user = $this->getActiveUser();
         $notifications = $this->Notifications->find('read', [
-            'for' => $user->get('refid'),
+            'user' => $user->get('refid'),
             'contain' => [
                 'Initiators' => ['Profiles'],
                 'Users' => ['Profiles']
             ]
-        ])
-        ->all()
-        ->toArray();
+        ]);
+        $notifications = (array) $this->Notifications->categorize($notifications);
 
         $this->set(compact('notifications'));
     }
@@ -108,16 +116,67 @@ class NotificationsController extends AppController
     public function unread() {
         $user = $this->getActiveUser();
         $notifications = $this->Notifications->find('unread', [
-            'for' => $user->get('refid'),
+            'user' => $user->get('refid'),
             'contain' => [
                 'Initiators' => ['Profiles'],
                 'Users' => ['Profiles']
             ]
-        ])
-            ->all()
-            ->toArray();
+        ]);
+        $notifications = (array) $this->Notifications->categorize($notifications);
 
         $this->set(compact('notifications'));
+    }
+
+
+    /**
+     * Fetch the most recent notifications, or a list of records created within
+     * a given time frame, beginning from a recent time specified in the
+     * 'between_time' key through an earlier time specified in the
+     * 'and_time' key of the $timeframe. For the time frame to work,
+     * the '$byTimeframe' parameter must be set to true.
+     *
+     * @param string $user Required: The ref_id of the user
+     * @param bool $byTimeframe Optional: Set to true if the result should be
+     * based on a given time frame.
+     * @param array $timeframe Optional: A time frame to use if result should be
+     * based on time frame. The array accepts the following keys: 'between_time'
+     * and 'and_time', where the former is a more recent date/time that defaults
+     * to the current timestamp 'now', if not specified, and the later is an
+     * earlier date/time that defaults to the number of hours since midnight,
+     * if not specified.
+     * @return \Cake\Collection\CollectionInterface|ResultSetInterface
+     */
+    private function __fetchRecent(string $user, bool $byTimeframe = false, array $timeframe = [])
+    {
+        if ($byTimeframe) {
+            $defaultTimeFrame = [
+                'between_time' => 'now',
+                'and_time' => "-".date('H') . " hours",
+            ];
+            $options = array_merge($defaultTimeFrame, $timeframe);
+            $options['user'] = $user;
+            unset($defaultTimeFrame);
+            $query = $this->Notifications
+                ->find('byTimeFrame', $options);
+        } else {
+            $query = $this->Notifications->find('allForUser', [
+                'for' => $user
+            ]);
+        }
+        $query = $query
+            ->contain([
+                'Initiators' => ['Profiles'],
+                'Users' => ['Profiles']
+            ])
+            ->orderDesc('Notifications.created');
+
+        if ($byTimeframe) {
+            return $query->filter(function ($row) {
+                return $row->matches >= 1;
+            });
+        } else {
+            return $query->all();
+        }
     }
 
     private function __getNotifications() {
@@ -152,8 +211,10 @@ class NotificationsController extends AppController
      * @return \Cake\Http\Response|void
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-    public function view($id = null)
+    public function v($id = null)
     {
+        echo $id;
+        exit;
         $notification = $this->Notifications->find('all')->where([
             'refid' => $id
         ]);

@@ -63,14 +63,14 @@ use App\Utility\TimeCalculator;
                             ); ?>
                 <input type="hidden" name="request_type" value="<?= h($request->type) ?>">
                 <input type="hidden" name="request_id" value="<?= h($request->refid) ?>">
-                <button 
+                <button
                     class="btn btn-md btn-success"
                     type="submit"
                     name="response_action"
                     value="accept"
                     onclick="acceptRequest(<?= h($request->refid) ?>)"
                     >Accept</button>
-                <button 
+                <button
                     class="btn btn-md btn-warning"
                     type="submit"
                     name="response_action"
@@ -90,7 +90,7 @@ use App\Utility\TimeCalculator;
 <div class="pending-requests">
             <?php if (count($pendingRequests)): ?>
     <div class="card pending-requests">
-        <div class="card-header bg-transparent"> 
+        <div class="card-header bg-transparent">
             <span class="fsz-sm fw-600 c-grey-900">Pending Requests</span>
         </div>
         <div class="card-body p-0">
@@ -104,11 +104,11 @@ use App\Utility\TimeCalculator;
                                         $status = ' read';
                                     }
                                     ?>
-                        <a 
-                            href="<?= $this->Url->request->getAttribute('base') ?>/requests/v/<?= h($pendingRequest->refid) ?>?e_notif_obj=<?= h($pendingRequest->type) ?>" 
+                        <a
+                            href="<?= $this->Url->request->getAttribute('base') ?>/requests/v/<?= h($pendingRequest->refid) ?>?e_notif_obj=<?= h($pendingRequest->type) ?>"
                             class="ntf<?= $status; ?> peers fxw-nw td-n py-2 px-3 c-grey-800 cH-blue bgcH-grey-100">
                             <div class="peer mR-15">
-                                <img class="w-3r bdrs-50p avatar avatar-lg" src="<?= $this->Url->webroot('uploads/' . h($pendingRequest->sender->profile_image_url)); ?>" alt="">
+                                <img class="w-3r bdrs-50p avatar avatar-lg" src="<?= $this->Url->webroot('public-files/' . h($pendingRequest->sender->profile_image_url)); ?>" alt="">
                             </div>
                             <div class="peer peer-greed">
                                 <div>

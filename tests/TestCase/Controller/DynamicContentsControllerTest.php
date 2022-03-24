@@ -3,14 +3,14 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use App\Controller\DynamicContentsController;
+use App\Controller\DCsController;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
 /**
- * App\Controller\DynamicContentsController Test Case
+ * App\Controller\DCsController Test Case
  *
- * @uses \App\Controller\DynamicContentsController
+ * @uses \App\Controller\DCsController
  */
 class DynamicContentsControllerTest extends TestCase
 {
@@ -22,7 +22,7 @@ class DynamicContentsControllerTest extends TestCase
      * @var array
      */
     protected $fixtures = [
-        'app.DynamicContents',
+        'app.DCs',
     ];
 
     /**

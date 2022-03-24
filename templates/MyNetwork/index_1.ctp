@@ -122,8 +122,8 @@ use Cake\Utility\Inflector;
                                 $profileImgUrl = '';
                                 $imagePath = '';
                                 if (!empty($connection->profile->getProfileImageUrl())) {
-                                    $profileImgUrl = $this->Url->assetUrl('uploads' . $connection->profile->getProfileImageUrl(), ['fullBase' => true]);
-                                    $imagePath = WWW_ROOT . 'uploads' . $connection->profile->getProfileImageUrl();
+                                    $profileImgUrl = $this->Url->assetUrl('public-files' . $connection->profile->getProfileImageUrl(), ['fullBase' => true]);
+                                    $imagePath = WWW_ROOT . 'public-files' . $connection->profile->getProfileImageUrl();
                                 }
                                 $imageSrc = $profileImgUrl; // Fallback in case the encoding fails
                                 if (file_exists($imagePath) && is_file($imagePath)) {

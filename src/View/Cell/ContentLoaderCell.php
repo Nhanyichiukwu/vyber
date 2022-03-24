@@ -2,6 +2,8 @@
 namespace App\View\Cell;
 
 use App\Model\Entity\User;
+use App\Model\Table\NotificationsTable;
+use App\Model\Table\PostsTable;
 use Cake\Datasource\EntityInterface;
 use Cake\Datasource\ResultSetInterface;
 use Cake\ORM\Locator\TableLocator;
@@ -12,6 +14,7 @@ use http\Exception\InvalidArgumentException;
 
 /**
  * ContentLoader cell
+ * @property PostsTable $Posts
  */
 class ContentLoaderCell extends Cell
 {
@@ -53,22 +56,44 @@ class ContentLoaderCell extends Cell
         $this->set(compact("$what"));
     }
 
-    public function fetch(string $what, array $args)
+    public function fetch(string $what, $finder = null, array $params = [])
     {
-        $method = Inflector::camelize($what);
-        try {
-            $this->viewBuilder()->setTemplate($what);
-        } catch (\Throwable $e) {
-            $this->viewBuilder()->setTemplate('fetch');
+        $tableName = ucfirst(Inflector::camelize($what));
+        if (is_null($finder)) {
+            $finder = 'all';
         }
-        return call_user_func_array([$this, $method], $args);
+
+        if (!isset($params['options'])) {
+            $params['options'] = [];
+        }
+        if (!isset($params['raw'])) {
+            $params['raw'] = true;
+        }
+        $table = (new TableLocator())->get($tableName);
+        $query = $table->find($finder, $params['options']);
+        if (isset($params['where'])) {
+            $query = $query->where($params['where']);
+        }
+        if (isset($params['contain'])) {
+            $query = $query->contain($params['contain']);
+        }
+//        try {
+//            $this->viewBuilder()->setTemplate($what);
+//        } catch (\Throwable $e) {
+//            $this->viewBuilder()->setTemplate('fetch');
+//        }
+
+//        if (isset($params['callback']) && is_callable($params['callback'])) {
+//            return $params['callback']($query);
+//        }
+        $this->set('result', $query);
     }
 
     /**
      * @param string $what
      * @param array|null $args
      */
-    public function list(string $what, array $args = null)
+    public function list(string $what, array $args = [])
     {
         $method = Inflector::camelize($what);
         $result = call_user_func_array([$this, $method], $args);
@@ -80,7 +105,28 @@ class ContentLoaderCell extends Cell
      * @param string|null $type
      * @return \Cake\Datasource\QueryInterface
      */
-    public function genres(string $finder = null, array $options = null)
+    public function industries(string $finder = null, array $options = [])
+    {
+        if (is_null($finder)) {
+            $finder = 'all';
+        }
+        $tbl = (new TableLocator())->get('Industries');
+        $industries = $tbl->find($finder, $options);
+        if (isset($options['where'])) {
+            $industries = $industries->where($options['where']);
+        }
+        if (isset($options['contain'])) {
+            $industries = $industries->contain($options['contain']);
+        }
+
+        return $industries;
+    }
+
+    /**
+     * @param string|null $type
+     * @return \Cake\Datasource\QueryInterface
+     */
+    public function genres(string $finder = null, array $options = [])
     {
         if (is_null($finder)) {
             $finder = 'all';
@@ -91,7 +137,7 @@ class ContentLoaderCell extends Cell
         return $genres;
     }
 
-    public function categories(string $finder = null, array $options = null)
+    public function categories(string $finder = null, array $options = [])
     {
         if (is_null($finder)) {
             $finder = 'all';
@@ -103,7 +149,7 @@ class ContentLoaderCell extends Cell
         return $categories;
     }
 
-    public function roles(string $finder = null, array $options = null)
+    public function roles(string $finder = null, array $options = [])
     {
         if (is_null($finder)) {
             $finder = 'all';
@@ -116,19 +162,29 @@ class ContentLoaderCell extends Cell
 
     /**
      *
-     * @param string $filterMethod
+     * @param string $finder
      * @param string|object $author
-     * @return void
+     * @return ResultSetInterface
      */
-    public function posts(string $finder, $author)
+    public function posts(string $finder, $author = 'any', array $options = []): ResultSetInterface
     {
         $this->loadModel('Posts');
         $posts = $this->Posts->find($finder, ['author' => $author]);
+        if (isset($options['offset'])) {
+            $posts = $posts->offset($options['offset']);
+        }
+        if (isset($options['limit'])) {
+            $posts = $posts->limit($options['limit']);
+        }
+        if (isset($options['order'])) {
+            if (is_array($options['order'])) {
+                $posts = $posts->order($options['order']);
+            } elseif (is_string($options['order'])) {
+                $posts = $posts->order(['Posts.date_published' => $options['order']]);
+            }
+        }
 
-//        $this->viewBuilder()->setTemplate('display');
-//        $this->set('count', $posts->count());
-
-        return $posts;
+        return $posts->all();
     }
 
     /**
@@ -214,15 +270,19 @@ class ContentLoaderCell extends Cell
 
     public function dueEvents($actor, $timeframe = '')
     {
-        $this->loadModel('Events');
-        $dueEvents = $this->Events->find('due', ['actor' => $actor->refid, 'timeframe' => $timeframe]);
-        return $dueEvents;
-    }
+        $eventVenues = $this->loadModel('EventVenues');
+        $dueEvents = $eventVenues->find('dueEventsWhereUserIsGuest', [
+            'user' => $actor->refid,
+            'timeframe' => $timeframe,
+        ])
+            ->order(['start_date' => 'DESC']);
 
-    public function notifications($actor)
-    {
-        $notifications = new NotificationsCell();
-//        $notifications->
+//        return $dueEvents;
+//        $dueEvents = $this->Events->find('due_events', [
+//            'user' => $actor->refid,
+////            'timeframe' => $timeframe
+//        ]);
+        return $dueEvents;
     }
 
     /**
@@ -277,6 +337,29 @@ class ContentLoaderCell extends Cell
     }
 
     /**
+     * Runs a query to retrieve all user notifications using a specified finder
+     * method.
+     *
+     * @param \App\Model\Entity\User $user
+     * @param string|null $finder Specifies the finder method to use. If none is
+     * is provided in the parameter, it will default to 'allForUser', which will
+     * fetch all possible records starting from the most recent to any quantity
+     * specified.
+     * @return \Cake\Datasource\QueryInterface
+     */
+    public function notifications($user, string $finder = null)
+    {
+        if (is_null($finder)) {
+            $finder = 'allForUser';
+        }
+
+        $this->loadModel('Notifications');
+        $notifications = $this->Notifications->find($finder, ['user' => $user->refid]);
+
+        return $notifications;
+    }
+
+    /**
      * Runs a query to retrieve all user unread notifications
      *
      * @param \App\Model\Entity\User $user
@@ -285,14 +368,17 @@ class ContentLoaderCell extends Cell
     public function unreadNotifications($user)
     {
         $this->loadModel('Notifications');
-        $unreadNotifications = $this->Notifications->find('unread', ['for' => $user->refid]);
+        $unreadNotifications = $this->Notifications->find('unread', ['user' => $user->refid]);
 
         return $unreadNotifications;
     }
 
-    public function events($user)
+    public function events($user, $category)
     {
+        pr($category);
+        exit;
         $eventsTbl = $this->loadModel('Events');
+
     }
 
     public function songs(string $finder = null, $matcher = null)
@@ -387,20 +473,28 @@ class ContentLoaderCell extends Cell
 
     }
 
-    public function users(string $finder = null, array $options = null)
+    public function users(string $finder = null, array $options = [])
     {
         if (is_null($finder)) {
             $finder = 'all';
         }
         $UsersTbl = $this->loadModel('Users');
         if (!$UsersTbl->hasFinder($finder)) {
-            throw new \Exception("Unknown find: `$finder`");
+            throw new \Exception("Unknown finder: `$finder`");
         }
-        if (is_null($options)) {
-            $options = [];
-        }
-        $users = $UsersTbl->find($finder, $options);
+
+        $users = $UsersTbl->find($finder, $options)->all();
 
         return $users;
+    }
+
+    public function trends($actor)
+    {
+
+    }
+
+    public function peopleYouMayKnow($actor)
+    {
+
     }
 }

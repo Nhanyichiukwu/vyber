@@ -35,21 +35,21 @@ class DateTimeFormatter
         return $datetime;
 //        $datetime = self::createFromFormat('Y-m-d H:i:s', $datetime, $timezone);
 
-        if ($this->Time->isToday($datetime)) {
-            $niceTime = $this->Time->timeAgoInWords($datetime);
-        } elseif ($this->Time->wasYesterday($datetime) || $this->Time->isPast($datetime) ) {
-            $niceTime = $this->Time->nice($datetime);
-        }
-        if (!$this->Time->isToday($datetime)) {
-            $lastComma = strrpos($niceTime, ',');
-            $niceTime = substr_replace($niceTime, ' @ ', $lastComma, 2);
-        }
-        if ($this->Time->wasYesterday($datetime)) {
-            $atpos = strpos($niceTime, '@');
-            $niceTime = substr_replace($niceTime, 'Yesterday ', 0, $atpos);
-        }
-
-        return $niceTime;
+//        if ($this->Time->isToday($datetime)) {
+//            $niceTime = $this->Time->timeAgoInWords($datetime);
+//        } elseif ($this->Time->wasYesterday($datetime) || $this->Time->isPast($datetime) ) {
+//            $niceTime = $this->Time->nice($datetime);
+//        }
+//        if (!$this->Time->isToday($datetime)) {
+//            $lastComma = strrpos($niceTime, ',');
+//            $niceTime = substr_replace($niceTime, ' @ ', $lastComma, 2);
+//        }
+//        if ($this->Time->wasYesterday($datetime)) {
+//            $atpos = strpos($niceTime, '@');
+//            $niceTime = substr_replace($niceTime, 'Yesterday ', 0, $atpos);
+//        }
+//
+//        return $niceTime;
     }
 
     public static function fullDateTime($datetime)
@@ -66,11 +66,11 @@ class DateTimeFormatter
 
     public static function getInstance()
     {
-        if (isset($this)) {
-            $instance = $this;
-        } else {
+//        if (isset($this)) {
+////            $instance = $this;
+//        } else {
             $instance = new static;
-        }
+//        }
 
         return $instance;
     }

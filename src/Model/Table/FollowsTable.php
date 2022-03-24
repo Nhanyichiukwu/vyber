@@ -105,10 +105,10 @@ class FollowsTable extends AppTable
     public function findFollowings( Query $query, array $options): ?Query
     {
         $follower = $options['user'];
-        return $query->where(['Follows.follower_refid' => $follower])
-            ->contain([
-                'Followings' => ['Profiles']
-            ]);
+        return $query->where(['follower_refid' => $follower]);
+//            ->contain([
+//                'Followings' => ['Profiles']
+//            ]);
     }
 
     /**
@@ -119,7 +119,7 @@ class FollowsTable extends AppTable
     public function findFollowers( Query $query, array $options): ?Query
     {
         $followee = $options['user'];
-        return $query->where(['Follows.followee_refid' => $followee])
+        return $query->where(['followee_refid' => $followee])
             ->contain([
                 'Followers' => ['Profiles']
             ]);

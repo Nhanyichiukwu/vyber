@@ -44,6 +44,6 @@ class Role extends Entity
         'modified' => true,
         'parent_role' => true,
         'child_roles' => true,
-        'user_roles' => true,
+        'profiles' => true,
     ];
 }

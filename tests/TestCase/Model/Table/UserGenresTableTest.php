@@ -3,18 +3,18 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Model\Table;
 
-use App\Model\Table\UserGenresTable;
+use App\Model\Table\ProfilesGenresTable;
 use Cake\TestSuite\TestCase;
 
 /**
- * App\Model\Table\UserGenresTable Test Case
+ * App\Model\Table\ProfilesGenresTable Test Case
  */
 class UserGenresTableTest extends TestCase
 {
     /**
      * Test subject
      *
-     * @var \App\Model\Table\UserGenresTable
+     * @var \App\Model\Table\ProfilesGenresTable
      */
     protected $UserGenres;
 
@@ -37,7 +37,7 @@ class UserGenresTableTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        $config = $this->getTableLocator()->exists('UserGenres') ? [] : ['className' => UserGenresTable::class];
+        $config = $this->getTableLocator()->exists('UserGenres') ? [] : ['className' => ProfilesGenresTable::class];
         $this->UserGenres = $this->getTableLocator()->get('UserGenres', $config);
     }
 

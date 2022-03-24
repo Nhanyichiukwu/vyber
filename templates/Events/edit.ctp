@@ -19,7 +19,7 @@
 <div class="events form large-9 medium-8 columns content">
     <?= $this->Form->create($event) ?>
     <fieldset>
-        <legend><?= __('Edit Event') ?></legend>
+        <legend><?= __('Edit Events') ?></legend>
         <?php
             echo $this->Form->control('refid');
             echo $this->Form->control('user_refid');

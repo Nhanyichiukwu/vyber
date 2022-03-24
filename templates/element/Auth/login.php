@@ -5,11 +5,18 @@
  */
 
 use App\View\AppView;
-use Cake\Routing\Router; ?>
+use Cake\Routing\Router;
+
+$thisPage = (string) $this->getRequest()->getParam('controller');
+$url = '';
+if (strtolower($thisPage) !== 'login') {
+    $url = Router::url(['controller' => 'login', 'action' => 'index'], true);
+}
+?>
 <div class="card mb-3 mmhtpn7c">
-    <div class="card-body p-5">
+    <div class="card-body p-3 p-md-5">
         <?= $this->Flash->render(); ?>
-        <?= $this->Form->create(null, ['class' => 'login-form']) ?>
+        <?= $this->Form->create(null, ['url' => $url, 'class' => 'login-form']) ?>
         <?php
         $this->Form->unlockField('email');
         $this->Form->unlockField('contact');

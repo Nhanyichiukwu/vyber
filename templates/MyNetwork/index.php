@@ -11,15 +11,13 @@ use Cake\Utility\Text;
 use Cake\Utility\Inflector;
 use Cake\Utility\Security;
 
+$this->enablePageHeader();
+$this->pageTitle('My Network');
 ?>
-
-<header class="page-header bg-white border-top px-3 py-2 my-0 mgriukcz">
-    <h3 class="page-title mb-0"><?= __('My Networks') ?></h3>
-</header>
-<section class="mb-2 mgriukcz bg-white">
+<section class="mb-2 bg-white mx-n3">
     <div class="section-body p-3">
         <div class="dulmx5k4 flex-nowrap flex-row foa3ulpk mgriukcz n1ft4jmn ofx-auto pl-3 tvdg2pcc compact">
-            <div class="col-4 col-lg-1 col-sm-2 muilk3da">
+            <div class="col-4 col-sm-2 muilk3da">
                 <div class="card bg-azure-dark mmhtpn7c">
                     <div class="card-header p-2 text-white">
                         <span class="icon lh_Ut7">
@@ -43,7 +41,7 @@ use Cake\Utility\Security;
                     </div>
                 </div>
             </div>
-            <div class="col-4 col-lg-1 col-sm-2 muilk3da">
+            <div class="col-4 col-sm-2 muilk3da">
                 <div class="card bg-azure-dark mmhtpn7c">
                     <div class="card-header p-2 text-white">
                         <span class="icon lh_Ut7">
@@ -67,7 +65,7 @@ use Cake\Utility\Security;
                     </div>
                 </div>
             </div>
-            <div class="col-4 col-lg-1 col-sm-2 muilk3da">
+            <div class="col-4 col-sm-2 muilk3da">
                 <div class="card bg-azure-dark mmhtpn7c">
                     <div class="card-header p-2 text-white">
                         <div class="d-flex">
@@ -93,7 +91,7 @@ use Cake\Utility\Security;
                     </div>
                 </div>
             </div>
-            <div class="col-4 col-lg-1 col-sm-2 muilk3da">
+            <div class="col-4 col-sm-2 muilk3da">
                 <div class="card bg-azure-dark mmhtpn7c">
                     <div class="card-header p-2 text-white">
                         <span class="icon lh_Ut7">
@@ -121,7 +119,7 @@ use Cake\Utility\Security;
                     </div>
                 </div>
             </div>
-            <div class="col-4 col-lg-1 col-sm-2 muilk3da">
+            <div class="col-4 col-sm-2 muilk3da">
                 <div class="card bg-azure-dark mmhtpn7c">
                     <div class="card-header p-2 text-white">
                         <span class="icon lh_Ut7">
@@ -169,7 +167,7 @@ use Cake\Utility\Security;
     </div>
 </section>
 <!-- Counters /-->
-<section class="section mgriukcz bg-white mb-2">
+<section class="section bg-white mb-2 mx-n3">
     <?php
     $sectionOutput = RandomString::generateString(6, 'mixed', 'alpha');
     ?>
@@ -224,7 +222,7 @@ use Cake\Utility\Security;
         <?= $this->element('App/loading'); ?>
     </div>
 </section>
-<section class="section mgriukcz bg-white mb-2">
+<section class="section bg-white mb-2 mx-n3">
     <div class="section-header p-3">
         <h6 class="section-title mb-0">People You May Know
             <span class="section-hint form-help"
@@ -267,7 +265,7 @@ use Cake\Utility\Security;
     </div>
     <div class="qYakgu-footer p-2 text-center">
         <?= $this->Html->link(__('See More'), [
-            'controller' => 'Discover',
+            'controller' => 'Explore',
             'action' => 'people',
             'people-you-may-know',
             '?' => [
@@ -285,7 +283,7 @@ use Cake\Utility\Security;
         ]); ?>
     </div>
 </section>
-<section class="section mgriukcz bg-white mb-2">
+<section class="section bg-white mb-2 mx-n3">
     <div class="section-header p-3">
         <h6 class="section-title mb-0">People You May Be Interested In
             <span class="section-hint form-help"
@@ -327,7 +325,7 @@ use Cake\Utility\Security;
     </div>
     <div class="qYakgu-footer p-2 text-center">
         <?= $this->Html->link(__('See More'), [
-            'controller' => 'Discover',
+            'controller' => 'Explore',
             'action' => 'people',
             'who-to-follow',
             '?' => [

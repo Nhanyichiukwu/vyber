@@ -58,6 +58,10 @@ class GenresTable extends Table
         $this->belongsTo('Industries', [
             'foreignKey' => 'industry_id',
         ]);
+
+        $this->belongsToMany('Profiles', [
+            'joinTable' => 'profiles_genres'
+        ]);
     }
 
     /**
@@ -126,5 +130,10 @@ class GenresTable extends Table
                 'Industries.slug' => $options['industry']
             ]);
         });
+    }
+
+    public function findByName(string $name)
+    {
+        return $this->find('all')->where(['name' => $name]);
     }
 }

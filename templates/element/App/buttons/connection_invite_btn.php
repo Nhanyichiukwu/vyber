@@ -1,13 +1,13 @@
 <?php
 /**
- * @var \App\Model\Entity\User $user
+ * @var \App\Model\Entity\User $appUser
  * @var \App\Model\Entity\User $account
  */
 //$btnLabel = $altLabel = 'connect';
 //$intent = 'request';
 //$btnState = 'unconnected';
 //$stateIcon = 'mdi-plus';
-//if (isset($user, $account) && $user->isConnectedTo($account)) {
+//if (isset($appUser, $account) && $appUser->isConnectedTo($account)) {
 //    $btnLabel = 'Connected';
 //    $altLabel = 'Disconnect';
 //    $btnState = 'connected';
@@ -25,7 +25,7 @@
         ]
     ], [
         'data' => [
-            'actor' => h($user->getUsername()),
+            'actor' => h($appUser->getUsername()),
             'account' => h($account->getUsername()),
         ],
         'type' => 'button',
@@ -33,14 +33,14 @@
         'data-commit' => "connection",
         'escapeTitle' => false,
         'data-referer' => $this->getRequest()->getRequestTarget(),
-        'class' => 'btn btn-icon uu3ruwfp btn-control-small btn-sm btn-warning ozqeiogn text-capitalize',
+        'class' => 'btn btn-icon uu3ruwfp btn-control-small btn-sm btn-app ozqeiogn text-capitalize',
         'data-state' => 'unconnected'
     ]); ?>
     <button type="button"
-            class="btn btn-icon uu3ruwfp btn-control-small btn-sm btn-warning
-            hw3efktc dropdown-toggle dropdown-icon mr-0"
+            class="btn btn-icon uu3ruwfp btn-control-small btn-sm btn-app
+            hw3efktc dropdown-toggle dropdown-icon me-0"
             role="button"
-            data-toggle="dropdown">
+            data-bs-toggle="dropdown">
         <span class="sr-only">Other Options</span>
         <div class="dropdown-menu" role="menu">
             <a class="dropdown-item" href="#">Follow</a>

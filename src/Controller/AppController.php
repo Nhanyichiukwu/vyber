@@ -18,19 +18,25 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Model\Entity\User;
+use App\Utility\Folder;
 use Cake\Controller\Controller;
 use Cake\Datasource\EntityInterface;
 use Cake\Event\Event;
 use Cake\Event\EventInterface;
 use Cake\Event\EventManager;
 use Cake\Core\Configure;
+use Cake\Http\Exception\ForbiddenException;
+use Cake\Http\Exception\NotFoundException;
 use Cake\Http\Response;
+use Cake\I18n\Date;
 use Cake\Routing\Router;
 use Cake\Utility\Inflector;
 use Cake\Utility\Text;
 use Cake\I18n\Time;
 use Cake\Http\Cookie\Cookie;
 use App\Utility\RandomString;
+use Cake\Validation\Validation;
+use Cake\View\Exception\MissingTemplateException;
 
 /**
  * Application Controller
@@ -55,9 +61,9 @@ use App\Utility\RandomString;
  * @property \App\Model\Table\BkpCategoriesTable $Categories
  * @property \App\Model\Table\GenresTable $Genres
  * @property \App\Model\Table\UsersTable $Users
- * @property \App\Model\Table\EventsTable $Events
- * @property \App\Model\Table\EventGuestsTable $EventManager
- * @property \App\Model\Table\EventVenuesTable $EventVenues
+ * @property \App\Model\Table\BkpEventsTable $Events
+ * @property \App\Model\Table\BkpEventsGuestsTable $EventManager
+ * @property \App\Model\Table\BkpEventsVenuesTable $EventVenues
  * @property \App\Model\Table\VideosTable $Videos
  * @property \App\Model\Table\AudiosTable $Audios
  * @property \App\Model\Table\RolesTable $Roles
@@ -76,6 +82,8 @@ use App\Utility\RandomString;
  */
 class AppController extends Controller
 {
+    private const USER_UPLOAD_DIR = WWW_ROOT . DS . 'public-files';
+    protected $_theme = 'Modern';
     public $userPlatform = 'desktop';
 
     /**
@@ -172,21 +180,21 @@ class AppController extends Controller
          */
 
         $this->Users = $this->getTableLocator()->get('Users');
-        $this->Profiles = $this->getTableLocator()->get('Profiles');
-        $this->Connections = $this->getTableLocator()->get('Connections');
-        $this->Requests = $this->getTableLocator()->get('Requests');
-        $this->Posts = $this->getTableLocator()->get('Posts');
-        $this->ENews = $this->getTableLocator()->get('ENews');
-        $this->Notifications = $this->getTableLocator()->get('Notifications');
-        $this->Chats = $this->getTableLocator()->get('Chats');
-        $this->ChatParticipants = $this->getTableLocator()->get('ChatParticipants');
-        $this->Messages = $this->getTableLocator()->get('Messages');
-        $this->Conversations = $this->getTableLocator()->get('Conversations');
-        $this->Events = $this->getTableLocator()->get('Events');
-        $this->EventVenues = $this->getTableLocator()->get('EventVenues');
-        $this->EventGuests = $this->getTableLocator()->get('EventGuests');
-        $this->PostReactions = $this->getTableLocator()->get('PostReactions');
-        $this->Photos = $this->getTableLocator()->get('Photos');
+//        $this->Profiles = $this->getTableLocator()->get('Profiles');
+//        $this->Connections = $this->getTableLocator()->get('Connections');
+//        $this->Requests = $this->getTableLocator()->get('Requests');
+//        $this->Posts = $this->getTableLocator()->get('Posts');
+//        $this->ENews = $this->getTableLocator()->get('ENews');
+//        $this->Notifications = $this->getTableLocator()->get('Notifications');
+//        $this->Chats = $this->getTableLocator()->get('Chats');
+//        $this->ChatParticipants = $this->getTableLocator()->get('ChatParticipants');
+//        $this->Messages = $this->getTableLocator()->get('Messages');
+//        $this->Conversations = $this->getTableLocator()->get('Conversations');
+//        $this->Events = $this->getTableLocator()->get('Events');
+//        $this->EventVenues = $this->getTableLocator()->get('EventVenues');
+//        $this->EventGuests = $this->getTableLocator()->get('EventGuests');
+//        $this->PostReactions = $this->getTableLocator()->get('PostReactions');
+//        $this->Photos = $this->getTableLocator()->get('Photos');
 
     }
 
@@ -194,20 +202,30 @@ class AppController extends Controller
     /**
      * @return User|null
      */
-    public function getActiveUser(): ?User
+    public function getActiveUser(array $additionalAssoc = []): ?User
     {
         $activeUser = null;
         if (null !== $this->Auth->user()) {
             $user = $this->Auth->user();
             $contains = [
+                'Profiles' => [
+                    'Languages',
+                    'Educations',
+                    'Industries',
+                    'Roles',
+                    'Genres'
+                ],
                 'UsersRatings',
-                'Profiles.UserRoles',
                 'SentRequests',
                 'ReceivedRequests',
                 'Connections' => [
                     'Correspondents' => ['Profiles']
-                ]
+                ],
             ];
+            if (!empty($additionalAssoc)) {
+                $contains = array_merge_recursive($contains, $additionalAssoc);
+            }
+
             $activeUser = $this->Users->getUser($user['refid'], $contains);
         }
 
@@ -217,7 +235,19 @@ class AppController extends Controller
     public function beforeFilter(EventInterface $event)
     {
         parent::beforeFilter($event);
+        $request = $this->getRequest();
+        if ($request->hasHeader('X-Crowdwow-Asynchronous-Request')) {
+//            $request = $request->with
+        }
 
+        // Track Site Guests (Including registered users)
+        $this->GuestsManager->trackGuests();
+        $userTimezone = $this->GuestsManager->getGuest()->get('timezone');
+        $timezoneSplit = explode('/', $userTimezone);
+        if (count($timezoneSplit) < 2) {
+            $userTimezone = date_default_timezone_get();
+        }
+        Configure::write('App.defaultTimezone', $userTimezone);
 //        $this->takeActivityLog();
 
 
@@ -229,8 +259,6 @@ class AppController extends Controller
 //        $this->viewBuilder()->setVar('title', $this->getName());
 //        $this->__manageUserSession();
 
-        // Track Site Guests (Including registered users)
-        $this->GuestsManager->trackGuests();
 
         // Detect the users' device
         $this->__enableUserDeviceDetector();
@@ -241,8 +269,13 @@ class AppController extends Controller
 
         if ($this->getActiveUser()) {
             $user = $this->getActiveUser();
-            $this->set('user', $user);
+            $this->set('appUser', $user);
         }
+
+
+//        $sidebarWidgetAccessKey = RandomString::generateString(16, 'mixed');
+//        $this->getRequest()->getSession()->write('cw_sidebar_widget_accesskey', $sidebarWidgetAccessKey);
+
     }
 
 
@@ -251,9 +284,16 @@ class AppController extends Controller
         parent::beforeRender($event);
 
         $this->set('platform', $this->userPlatform);
-        if ($this->userPlatform !== 'mobile') {
-//            $this->viewBuilder()->setTheme('Mobile');
+        if ($this->_theme !== null) {
+            $this->viewBuilder()->setTheme($this->_theme);
+//            $this->viewBuilder()
+//                ->setLayoutPath($this->_theme);
+//                ->setTemplatePath($this->_theme . '.templates');
         }
+
+//        if ($this->userPlatform !== 'mobile') {
+//            $this->viewBuilder()->setTheme('Mobile');
+//        }
 
         // Setting the layout for timeline
 
@@ -328,9 +368,10 @@ class AppController extends Controller
         return $account;
     }
 
-    public function unknownUser(string $userID)
+    public function unknownUser(string $username)
     {
-        throw new NotFoundException('Sorry, we looked everywhere but couldn\'t find the user you\'re looking for.');
+        $message = sprintf("Sorry, but we looked everywhere but couldn\'t find any user bearing `%s`.", $username);
+        throw new NotFoundException($message);
     }
 
     public function __enableUserDeviceDetector()
@@ -352,16 +393,6 @@ class AppController extends Controller
         });
 
         return $users;
-    }
-
-    /**
-     * Global Runtime Configuration Method
-     *
-     * @return Configure
-     */
-    public function configure()
-    {
-        return new Configure();
     }
 
     /**
@@ -398,8 +429,6 @@ class AppController extends Controller
             $this->viewBuilder()->setLayout('ajax');
         }
     }
-
-
 
     public function getUserLocationInfo(array $info)
     {
@@ -1206,5 +1235,85 @@ class AppController extends Controller
             }
             throw new NotFoundException();
         }
+    }
+
+    public function display(... $path)
+    {
+        // Prevent illegal dots in the path
+        if (in_array('..', $path, true) || in_array('.', $path, true)) {
+            throw new ForbiddenException();
+        }
+
+        $page = $path[0];
+        $subpage = null;
+        if (!empty($path[1])) {
+            $subpage = $path[1];
+        }
+
+//        $request = $this->getRequest();
+        $user = $this->getActiveUser();
+
+        // Define the request handler based on the last path in the url
+//        $lastOfPath = Inflector::underscore(end($path));
+
+        if (Validation::numeric($page) && $this->hasAction('view')) {
+            $this->viewBuilder()->setTemplate('view');
+            $this->view($page, $subpage);
+        } else {
+            $requestHandler = lcfirst(
+                Inflector::camelize((string)$page, '-')
+            );
+
+            if ($this->hasAction($requestHandler)) {
+                $this->{$requestHandler}($path);
+            }
+        }
+
+        $tpl = $this->viewBuilder()->getTemplate();
+
+        if ($tpl === null || str_contains($tpl, 'display')) {
+            $path = implode(DS, $path);
+            $tpl = Inflector::underscore($path);
+        }
+
+        try {
+            $this->viewBuilder()->setTemplate($tpl);
+        } catch (MissingTemplateException $ex) {
+            if (Configure::read('debug')) {
+                throw $ex;
+            } else {
+                throw new NotFoundException();
+            }
+        }
+
+        $this->set(compact('user','page','subpage','path'));
+    }
+
+    public function getCurrentDateTime(string $timezone = null)
+    {
+        if (is_null($timezone)) {
+            $timezone = Configure::read('App.defaultTimezone');
+        }
+        $timezone = new \DateTimeZone($timezone);
+        try {
+            $datetime = new \DateTime('now', $timezone);
+        } catch (\Exception $e) {
+        }
+
+        return $datetime;
+    }
+
+    public function enableSidebar(bool $option = true)
+    {
+        $this->set('sidebar', $option);
+    }
+
+    public function collapseOffCanvas(bool $option = false)
+    {
+        $offcanvasState = 'off-canvas-expanded';
+        if ($option) {
+            $offcanvasState = 'off-canvas-collapsed';
+        }
+        $this->set('offcanvas_state', $offcanvasState);
     }
 }

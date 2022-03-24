@@ -13,6 +13,39 @@ $this->assign(
 );
 ?>
 <div class="activities index content">
+    <?php
+    $token = base64_encode(
+        serialize(
+            json_encode([
+                'resource_handle' => 'activities',
+                'resource_path' => '/Activities/index',
+                'content' => 'activity',
+            ])
+        )
+    );
+
+    $latestSongsQuery = array_merge($get,[
+        'filter' => 'latest',
+        'token' => $token,
+    ]);
+    $latestSongsQueryStr = http_build_query($latestSongsQuery);
+    $latestSongsDataSrc = 'activity?' . $latestSongsQueryStr;
+    ?>
+    <div id="fetch-new-songs"
+         data-load-type="async"
+         class="ajaxify mb-n3"
+         data-category="page_data"
+         data-src="<?= $latestSongsDataSrc ?>"
+         data-config='<?= json_encode([
+             'content' => 'activity',
+             'remove_if_no_content' => 'no',
+             'check_for_update' => 'yes',
+             'auto_update' => 'yes',
+             'use_data_prospect' => 'yes',
+             'load_type' => 'overwrite',
+         ]); ?>'>
+        <?= $this->element('App/loading', ['modifier' => 'py-3']); ?>
+    </div>
     <?php foreach ($activities as $activity): ?>
     <div class="activity-list-item">
         <a href="#" class="">

@@ -228,12 +228,12 @@ class CommitsController extends AppController
                 'message' => 'Sorry, your request could not be sent at the moment'
             ];
         }
-//                $beforeSaveEvent = new Event('Model.Requests.beforeSave', $this->Requests, [
+//                $beforeSaveEvent = new Events('Model.Requests.beforeSave', $this->Requests, [
 //                    'request' => $requestEntity
 //                ]);
 //                $this->eventManager()->dispatch($beforeSaveEvent);
 //
-//                $event = new Event('Notification.connection.afterRequest', $this, [
+//                $event = new Events('Notification.connection.afterRequest', $this, [
 //                    'request' => $requestEntity
 //                ]);
 //                $this->getEventManager()->dispatch($event);
@@ -296,12 +296,12 @@ class CommitsController extends AppController
             }
         }
 
-//                $beforeSaveEvent = new Event('Model.Requests.beforeSave', $this->Requests, [
+//                $beforeSaveEvent = new Events('Model.Requests.beforeSave', $this->Requests, [
 //                    'request' => $requestEntity
 //                ]);
 //                $this->eventManager()->dispatch($beforeSaveEvent);
 //
-//                $event = new Event('Notification.connection.afterRequest', $this, [
+//                $event = new Events('Notification.connection.afterRequest', $this, [
 //                    'request' => $requestEntity
 //                ]);
 //                $this->getEventManager()->dispatch($event);
@@ -590,7 +590,7 @@ class CommitsController extends AppController
         try {
             $newPost = $this->Posts->get($newPostID);
             if ($newPost instanceof Post) {
-                // Create an onPostClone Event here
+                // Create an onPostClone Events here
                 // ...
                 return $this->redirect(['controller' => 'live-feed', 'action' => 'fetch_post', $newPostID]);
             }

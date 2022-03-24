@@ -1,0 +1,181 @@
+/*
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+*/
+/*
+    Created on : 15-Jul-2019, 23:38:57
+    Author     : USER
+*/
+
+/*noinspection CssInvalidFunction*/
+:root {
+    /*--default-main: #ffbf00;
+    --default-body: #15171a;
+    --default-navbar: #000;
+    --default-text: #7a7a7a;
+    --default-cards: #0a0c0d;
+    --default-button: #6c6c6c;
+    --default-border: #202020;*/
+
+    --default-main: #fc7800;
+    --default-body: #000814;
+    --default-navbar: #000b20;
+    --default-text: #7a7a7a;
+    --default-cards: #000e20;
+    --default-button: #6c6c6c;
+    --default-border: #ffffff2e;
+    --heading-color: #b9b3b3;
+}
+ .default {
+     background-color: var(--default-body);
+     /*color: var(--default-text);*/
+ }
+body.desktop-layout.default.off-canvas::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 0;
+    pointer-events: none;
+    height: 430px;
+    /*background-color: #fc7800;*/
+    /*background-image: linear-gradient(45deg, transparent 40%, #d31918);*/
+    /*background-image: url(http://localhost/vyber.com/media/N6A5ebYzKasr9Hw2gpHN?type=photo&format=jpg&size=small);*/
+    border-bottom-left-radius: 2.5rem;
+}
+.default .page-header a,
+.default ._ah49Gn {
+    color: var(--default-main);
+}
+.default .card,
+.default .post-card,
+.default .list-group-item,
+.default .drawer,
+.default .page {
+    background-color: var(--default-cards);
+}
+.default .btn {
+    color: var(--default-button);
+}
+
+.default .app-navbar,
+.default .app-bottom-nav {
+    background-color: var(--default-navbar);
+}
+/*.default .border, .default [class*="border-"] {*/
+/*    border-color: var(--default-border) !important;*/
+/*}*/
+.default:not(.offcanvas) .app-header > .hCp {
+    background: var(--default-main) var(--theme-webkit-gradient);
+    background: var(--default-main) var(--theme-gradient);
+}
+
+.default .app-header-nav .item {
+    color: #3a1c00 !important;
+}
+.default .app-header-nav .item:hover,
+.default .app-header-nav .item.active {
+    color: #ffcb9b !important;
+}
+.default .app-bottom-nav .item.active {
+    color: var(--default-main) !important;
+}
+.default .ldk4goct.nav-tabs {
+    border-color: var(--default-border) !important;
+}
+.default .ldk4goct .nav-link {
+    color: var(--default-button) !important;
+}
+.default .ldk4goct .nav-link:hover:not(.disabled),
+.default .ldk4goct .nav-link.active {
+    color: var(--default-main) !important;
+    border-bottom-color: var(--default-main) !important;
+}
+
+.default .btn-app {
+    color: #fff;
+    /*background: var(--default-main) var(--theme-webkit-gradient), var(--theme-gradient);*/
+    background: var(--default-main) var(--theme-webkit-gradient);
+    background: var(--default-main) var(--theme-gradient);
+    border-color: var(--default-main);
+}
+.default .btn-app:hover {
+    color: #fff;
+    background: var(--default-main);
+    border-color: #e76e00;
+}
+
+.default .btn-app:focus, .default .btn-app.focus {
+    box-shadow: 0 0 0 2px rgb(241 196 15 / 50%);
+}
+.default .bg-chameleon {
+    background: var(--default-navbar);
+}
+.app-header a.highlighted, .page-header .page-title {
+    color: var(--dark);
+}
+
+
+.default .i__pc-h .account-fullname {
+    color: var(--heading-color);
+}
+
+.e_kjg {
+    background-color: var(--default-main);
+    color: #fff;
+}
+a.e_kjg:hover, .btn.e_kjg:hover {
+    color: #ffffffad;
+}
+.e_bJ-ruM {
+    background-color: #b90033;
+    color: #FFFFFF;
+}
+.theme-bg-gradient {
+    background-image: radial-gradient(var(--default-main) 55%, transparent 40%);
+    background-size: 190%;
+    background-position: center top -200px;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+
+.nav li.active a,
+.navbar-nav li.active a,
+li.active a,
+a:hover {
+    color: #EB3600;
+}
+.sidebar-menu > li > a:hover .icon-holder,
+.sidebar-menu > li > a:hover .link-text,
+.sidebar-menu > li.active > a .icon-holder,
+.sidebar-menu > li.active > a .link-text {
+    color: var(--default-main);
+    /*text-shadow: 0.3px 0.3px 0px rgba(0, 0, 0, 0.43137254901960786);*/
+}
+.sidebar-menu > li.active > a {
+    box-shadow: inset 4px 0 0 var(--default-main);
+}
+.toolbar.page-nav .nav-tabs li.active .nav-link,
+.toolbar.page-nav .nav-tabs li .nav-link.active {
+    border-color: var(--default-main) !important;
+    color: var(--default-main) !important;
+}
+
+.profile-nav .e__nav-link:hover,
+.profile-nav .e__nav-link:active,
+.profile-nav .e__nav-link:focus,
+.profile-nav .e__nav-link.active {
+    border-color: var(--default-main) !important;
+    color: var(--default-main) !important;
+}
+
+@media (min-width: 992px) {
+    .default .ldk4goct .nav-link:hover:not(.disabled),
+    .default .ldk4goct .nav-link.active {
+        box-shadow: inset 4px 0 0 var(--default-main);
+        border-bottom-color: transparent !important;
+    }
+}

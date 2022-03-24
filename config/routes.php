@@ -45,35 +45,53 @@ use Cake\Routing\RouteBuilder;
  */
 /** @var \Cake\Routing\RouteBuilder $routes */
 
-//$routes->connect(
-//    '/:username',
-//    array(
-//        'controller' => 'Profiles',
-//        'action' => 'view'
-//    ),
-//    array(
-//        'username' => '[a-zA-Z0-9_]+',
-//        'routeClass' => 'UsernameRoute',
-//    )
-//);
+
 
 
 //$usernameRoutes = clone $routes;
-//
-//$usernameRoutes->setRouteClass(UsernameRoute::class);
-//$usernameRoutes->scope('/{username}', ['controller' => 'Profiles'], function (RouteBuilder $builder) {
-//    $builder->connect('/', ['action' => 'index'], [
-//        'routeClass' => 'UsernameRoute',
-//        'pass' => ['username', 'path']
-//    ])
+
+$routes->setRouteClass(DashedRoute::class);
+
+
+$routes->scope('/:username', ['controller' => 'Profiles'], function (RouteBuilder $builder) {
+    $builder
+        ->connect('/', ['action' => 'index'], [
+            'routeClass' => 'DashedRoute',
+            'pass' => ['username', 'path']
+        ])
+        ->setPatterns([
+            'username' => '[a-zA-Z0-9_]+',
+        ]);
+
+//    $builder->connect('/:action /*', ['action' => 'display']);
+    $builder->connect('/*', ['action' => 'display'], [
+        'routeClass' => 'DashedRoute',
+        'pass' => ['username','path']
+    ]);
+//    $builder
+//        ->connect('/:action/*', ['action' => 'display'], [
+//            'routeClass' => 'DashedRoute',
+//            'pass' => ['username', 'path']
+//        ])
+//        ->setPatterns([
+//            'username' => '[a-zA-Z0-9_]+',
+////            'action' => '[a-zA-Z0-9_-]+',
+//        ]);
+
+//    $builder
+//        ->connect('/:action/*', [], [
+//            'routeClass' => 'DashedRoute',
+//            'pass' => ['username', 'path']
+//        ])
 //        ->setPatterns([
 //            'username' => '[a-zA-Z0-9_]+',
 //        ]);
-//
-//    $builder->fallbacks(UsernameRoute::class);
-//});
-
-$routes->setRouteClass(DashedRoute::class);
+});
+$routes->scope('/groups/', ['controller' => 'Groups'], function (RouteBuilder $builder) {
+    $builder->connect('/', ['action' => 'index']);
+//    $builder->connect('/:controller', ['action' => 'index'], ['routeClass' => 'DashedRoute']);
+    $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
+});
 
 $routes->scope('/', function (RouteBuilder $builder) {
     /**
@@ -89,155 +107,24 @@ $routes->scope('/', function (RouteBuilder $builder) {
 
     $builder->connect('/settings', ['controller' => 'Settings', 'action' => 'index']);
     $builder->connect('/settings/*', ['controller' => 'Settings', 'action' => 'display']);
+    $builder->connect('/activities', ['controller' => 'Activities', 'action' => 'index']);
+    $builder->connect('/activities/*', ['controller' => 'Activities', 'action' => 'display']);
+    $builder->connect('/notifications', ['controller' => 'Notifications', 'action' => 'index']);
+    $builder->connect('/notifications/*', ['controller' => 'Notifications', 'action' => 'display']);
 
+    $builder->connect('/signup', ['controller' => 'Signup']);
+    $builder->connect('/login', ['controller' => 'Login']);
     $builder->connect('/logout', ['controller' => 'Auth', 'action' => 'logout']);
-
     $builder->connect('/post/*', ['controller' => 'Posts', 'action' => 'view']);
-
+    $builder->connect('/people', ['controller' => 'People', 'action' => 'index']);
     $builder->connect('/people/*', ['controller' => 'People', 'action' => 'display']);
-
+//    $builder->connect('/people/similar-people/*', ['controller' => 'People', 'action' => 'display']);
     $builder->connect('/music', ['controller' => 'Music', 'action' => 'index']);
     $builder->connect('/music/*', ['controller' => 'Music', 'action' => 'display']);
 
-
-    $builder->scope('/media', function (RouteBuilder $builder) {
-        $builder->connect('/static-bg/:img_name', [
-            'controller' => 'DynamicFiles',
-            'action' => 'load'
-        ], ['routeClass' => 'DashedRoute',
-            'pass' => [
-                'img_name'
-            ]
-        ]);
-
-        $builder->connect('/:refid', [
-            'controller' => 'DynamicFiles',
-            'action' => 'load'
-        ], [
-            'routeClass' => 'DashedRoute',
-            'pass' => [
-                'refid'
-            ]
-        ]);
-    });
-    $builder->scope('/events/', ['controller' => 'Events'], function (RouteBuilder $builder) {
-
-        $builder->connect('/', ['action' => 'Events']);
-        $builder->connect('/*', ['controller' => 'Events']);
-
-        //    $routes->connect('/videos/edit/:id/*', ['controller' => 'DynamicFiles', 'action' => 'view'], ['routeClass' => 'DashedRoute', 'pass' => [
-        //        'id', 'path'
-        //    ]]);
-    });
-    $builder->scope('/music/', ['controller' => 'Music'], function (RouteBuilder $builder) {
-
-        $builder->connect('/', ['action' => 'index']);
-        $builder->connect('/songs', ['action' => 'songs']);
-        $builder->connect('/videos', ['action' => 'videos']);
-        $builder->connect('/lyrics', ['action' => 'lyrics']);
-        $builder->connect('/my-music/*', ['action' => 'myMusic']);
-        $builder->connect('/albums', ['action' => 'albums']);
-        $builder->connect('/artists', ['action' => 'artists']);
-        $builder->connect('/categories', ['action' => 'categories']);
-        $builder->connect('/categories/{category}', [
-            'action' => 'listCategoryItems'
-        ], [
-            'routeClass' => 'DashedRoute',
-            'pass' => ['category']
-        ]);
-        $builder->connect('/genres', ['action' => 'genres']);
-        $builder->connect('/trends', ['action' => 'trends']);
-        $builder->connect('/discover/*', ['action' => 'discover']);
-    });
-//    $builder->get('/xhrs/*', ['Elements/ajaxified']);
-//    $builder->get('/xhrs/{*}', [
-//        'controller' => 'Xhrs',
-//        'action' => 'ajaxify'
-//    ]);
-//    $builder->connect('/xhrs/{path}', ['action' => 'ajaxify'], [
-//        'routeClass' => 'DashedRoute',
-//        'pass' => ['path']
-//    ]);
-
-    $builder->scope(
-        '/xhrs/:page',
-        ['controller' => 'Xhrs'],
-        function (RouteBuilder $builder) {
-            $builder
-                ->connect('/', ['action' => 'ajaxify'], [
-                    'routeClass' => 'DashedRoute',
-                    'pass' => ['page', 'path']
-                ])
-                ->setPatterns([
-                    'page' => '[a-zA-Z0-9_]+',
-                ]);
-        }
-    );
-
-//    $builder->registerMiddleware(
-//        'username_lookup',
-//        UsernameLookupMiddleware::class
-//    );
-    $builder->scope(
-        '/i/{username}',
-        ['controller' => 'Profiles'],
-        function (RouteBuilder $builder) {
-            $builder
-                ->connect('/', ['action' => 'index'], [
-                    'routeClass' => 'DashedRoute',
-                    'pass' => ['username', 'path']
-                ])
-                ->setPatterns([
-                    'username' => '[a-zA-Z0-9_]+',
-                ]);
-        }
-    );
-
-    $builder->scope('/{username}/posts/{post_id}/', function (RouteBuilder $builder) {
-        $builder->connect('/comments/', ['action' => 'comments'], [
-            'routeClass' => 'DashedRoute',
-            'pass' => ['username', 'post_id'],
-            'post_id' => '[0-9]+'
-        ]);
-
-        $builder->connect('/comments/add_comment', ['action' => 'addComment'], [
-            'routeClass' => 'DashedRoute',
-            'pass' => ['username', 'post_id'],
-            'post_id' => '[0-9]+'
-        ]);
-
-        $builder->connect('/comments/:comment_id', ['action' => 'readComment'], [
-            'routeClass' => 'DashedRoute',
-            'pass' => ['username', 'post_id', 'comment_id'],
-            'post_id' => '[0-9]+',
-            'comment_id' => '[0-9]+'
-        ]);
-        $builder->connect('/followers', ['controller' => 'Posts', 'action' => 'followers'], [
-            'routeClass' => 'DashedRoute',
-            'pass' => ['username', 'post_id'],
-            'username' => '[a-zA-Z0-9-_]+',
-            'post_id' => '[a-zA-Z0-9-_]+',
-        ]);
-        $builder->connect('/reactions', ['controller' => 'Posts', 'action' => 'reactions'], [
-            'routeClass' => 'DashedRoute',
-            'pass' => ['username', 'post_id'],
-            'post_id' => '[a-zA-Z0-9-_]+',
-        ]);
-
-        $builder->connect('/', ['controller' => 'Posts', 'action' => 'read'], [
-            'routeClass' => 'DashedRoute',
-            'pass' => ['username', 'post_id'],
-            'post_id' => '[a-zA-Z0-9-_]+'
-        ]);
-    });
-/*
-    $routes->connect('/e', ['controller' => 'Error']);
-    $routes->connect('/notifications', ['controller' => 'notifications', 'action' => 'index']);
-    $routes->connect('/notifications/*', ['controller' => 'notifications', 'action' => 'view']);
-    $routes->connect('/calendar/:action', ['action' => 'goto-date'], ['routeClass' => 'DashedRoute']);
-    $routes->connect('/message/*', ['controller' => 'Messages', 'action' => 'view']);
-    $routes->connect('/content', ['controller' => 'Error']);
-*/
+    $builder->connect('/:controller', ['action' => 'index'], ['routeClass' => 'DashedRoute']);
+    $builder->connect('/:controller/:action/*', [], ['routeClass' => 'DashedRoute']);
+    $builder->connect('/feeds', ['controller' => 'Feeds']);
 
     /**
      * Connect catchall routes for all controllers.
@@ -261,41 +148,162 @@ $routes->scope('/', function (RouteBuilder $builder) {
     $builder->fallbacks(DashedRoute::class);
 });
 
-//$routes->scope('/my-network/', ['controller' => 'MyNetwork'], function (RouteBuilder $builder) {
-//    $builder->connect('/connections', ['action' => 'connections']);
-//    $builder->connect('/connections/pending', ['action' => 'pendingConnections']);
-//    $builder->connect('/connections/sent-requests', ['action' => 'requestedConnections']);
-//    $builder->connect('/connections/{category}', ['action' => 'connectionsByCategory']);
-//    $builder->connect('/introductions', ['action' => 'introductions']);
-//    $builder->connect('/introductions/sent', ['action' => 'sentIntroductions']);
-//    $builder->connect('/introductions/pending', ['action' => 'pendingIntroductions']);
-//    $builder->connect('/recommendations', ['action' => 'recommendations']);
-//    $builder->connect('/recommendations/sent', ['action' => 'sentRecommendations']);
-//    $builder->connect('/recommendations/pending', ['action' => 'pendingRecommendations']);
-//    $builder->connect('/meetings', ['action' => 'meetings']);
-//    $builder->connect('/meetings/requested', ['action' => 'requestedMeetings']);
-//    $builder->connect('/meetings/pending', ['action' => 'pendingMeetings']);
-//    $builder->connect('/', ['action' => 'index']);
+$routes->scope('/media', ['controller' => 'DynamicFiles'], function (RouteBuilder $builder) {
+    $builder->connect('/', ['action' => 'index']);
+//    $builder->connect('/:controller', ['action' => 'index'], ['routeClass' => 'DashedRoute']);
+    $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
+
+//    $builder->connect('/static-bg/:img_name', [
+//        'controller' => 'DynamicFiles',
+//        'action' => 'load'
+//    ], ['routeClass' => 'DashedRoute',
+//        'pass' => [
+//            'img_name'
+//        ]
+//    ]);
+//    $builder->connect('/*', [
+//        'controller' => 'DynamicFiles',
+//        'action' => 'load'
+//    ], ['routeClass' => 'DashedRoute',
+////        'pass' => [
+////            'img_name'
+////        ]
+//    ]);
 //
-//    $builder->fallbacks(DashedRoute::class);
+//    $builder->connect('/:refid', [
+//        'controller' => 'DynamicFiles',
+//        'action' => 'media'
+//    ], [
+//        'routeClass' => 'DashedRoute',
+//        'pass' => [
+//            'refid'
+//        ]
+//    ]);
+});
+$routes->scope('/events/', ['controller' => 'Events'], function (RouteBuilder $builder) {
+    $builder->connect('/', ['action' => 'index']);
+    $builder->connect('/*', ['action' => 'display']);
+});
+$routes->scope('/posts/', ['controller' => 'Posts'], function (RouteBuilder $builder) {
+    $builder->connect('/', ['action' => 'index']);
+//    $builder->connect('/:controller', ['action' => 'index'], ['routeClass' => 'DashedRoute']);
+    $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
+});
+$routes->scope('/explore/', ['controller' => 'Explore'], function (RouteBuilder $builder) {
+    $builder->connect('/', ['action' => 'index']);
+//    $builder->connect('/:controller', ['action' => 'index'], ['routeClass' => 'DashedRoute']);
+    $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
+});
+$routes->scope('/talents-hub/', ['controller' => 'TalentsHub'], function (RouteBuilder $builder) {
+    $builder->connect('/', ['action' => 'index']);
+    $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
+});
+$routes->scope('/my-network/', ['controller' => 'MyNetwork'], function (RouteBuilder $builder) {
+    $builder->connect('/', ['action' => 'index']);
+    $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
+});
+$routes->scope('/hall-of-fame/', ['controller' => 'HallOfFame'], function (RouteBuilder $builder) {
+    $builder->connect('/', ['action' => 'index']);
+    $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
+});
+$routes->scope('/groups/', ['controller' => 'Groups'], function (RouteBuilder $builder) {
+    $builder->connect('/', ['action' => 'index']);
+//    $builder->connect('/:controller', ['action' => 'index'], ['routeClass' => 'DashedRoute']);
+    $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
+});
+$routes->scope('/support/', ['controller' => 'Support'], function (RouteBuilder $builder) {
+    $builder->connect('/', ['action' => 'index']);
+    $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
+});
+//$routes->scope('/talent-hub/', ['controller' => 'TalentHub'], function (RouteBuilder $builder) {
+//    $builder->connect('/', ['action' => 'index']);
+////    $builder->connect('/:controller', ['action' => 'index'], ['routeClass' => 'DashedRoute']);
+//    $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
 //});
 
-$routes->scope('/notifications/', ['controller' => 'Notifications'], function (RouteBuilder $routes) {
-    $routes->connect('/', ['action' => 'index']);
-    $routes->connect('/read', ['action' => 'read']);
-    $routes->connect('/unread', ['action' => 'unread']);
-});
+$routes->scope(
+    '/xhrs',
+    ['controller' => 'Xhrs'],
+    function (RouteBuilder $builder) {
+        $builder
+            ->connect('/*', ['action' => 'ajaxify'], [
+                'routeClass' => 'DashedRoute',
+                'pass' => ['page', 'path']
+            ])
+            ->setPatterns([
+                'page' => '[a-zA-Z0-9_]+',
+            ]);
+//        $builder
+//            ->connect('/f/*', ['action' => 'fetch'], [
+//                'routeClass' => 'DashedRoute',
+//                'pass' => ['page', 'path']
+//            ])
+//            ->setPatterns([
+//                'page' => '[a-zA-Z0-9_]+',
+//            ]);
+//        $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
+//        $builder->fallbacks(DashedRoute::class);
+    }
+);
 
-$routes->scope('/videos/', ['controller' => 'Videos'], function (RouteBuilder $builder) {
-    $builder->connect('/', ['action' => 'index']);
+$routes->scope(
+    '/search',
+    ['controller' => 'Search'],
+    function (RouteBuilder $builder) {
+        $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
+    }
+);
 
-    $builder->fallbacks(DashedRoute::class);
-});
 
-// $routes->connect('/videos/edit/:id/*', ['controller' => 'DynamicFiles', 'action' => 'view'], ['routeClass' => 'DashedRoute', 'pass' => [
-//        'id', 'path'
-//    ]]);
 
+//$usernameRoutes->scope('/:username', ['controller' => 'Profiles'], function (RouteBuilder $builder) {
+//    $builder->connect('/', ['action' => 'index'], [
+//        'routeClass' => 'UsernameRoute',
+//        'pass' => ['username', 'path']
+//    ])
+//        ->setPatterns([
+//            'username' => '[a-zA-Z0-9_]+',
+//        ]);
+//
+////    $builder->fallbacks(UsernameRoute::class);
+//});
+//$routes->scope('/{username}/posts/{post_id}/', function (RouteBuilder $builder) {
+//    $builder->connect('/comments/', ['action' => 'comments'], [
+//        'routeClass' => 'DashedRoute',
+//        'pass' => ['username', 'post_id'],
+//        'post_id' => '[0-9]+'
+//    ]);
+//
+//    $builder->connect('/comments/add_comment', ['action' => 'addComment'], [
+//        'routeClass' => 'DashedRoute',
+//        'pass' => ['username', 'post_id'],
+//        'post_id' => '[0-9]+'
+//    ]);
+//
+//    $builder->connect('/comments/:comment_id', ['action' => 'readComment'], [
+//        'routeClass' => 'DashedRoute',
+//        'pass' => ['username', 'post_id', 'comment_id'],
+//        'post_id' => '[0-9]+',
+//        'comment_id' => '[0-9]+'
+//    ]);
+//    $builder->connect('/followers', ['controller' => 'Posts', 'action' => 'followers'], [
+//        'routeClass' => 'DashedRoute',
+//        'pass' => ['username', 'post_id'],
+//        'username' => '[a-zA-Z0-9-_]+',
+//        'post_id' => '[a-zA-Z0-9-_]+',
+//    ]);
+//    $builder->connect('/reactions', ['controller' => 'Posts', 'action' => 'reactions'], [
+//        'routeClass' => 'DashedRoute',
+//        'pass' => ['username', 'post_id'],
+//        'post_id' => '[a-zA-Z0-9-_]+',
+//    ]);
+//
+//    $builder->connect('/', ['controller' => 'Posts', 'action' => 'read'], [
+//        'routeClass' => 'DashedRoute',
+//        'pass' => ['username', 'post_id'],
+//        'post_id' => '[a-zA-Z0-9-_]+'
+//    ]);
+//});
 
 /**
  * If you need a different set of middleware or none at all,
@@ -325,6 +333,12 @@ $routes->scope('/messages', function ($routes) {
 //    $routes->scope('/messenger', function ($routes) {
 //        $routes->loadPlugin('Messenger');
 //    });
+});
+
+$routes->scope('/messages/', ['controller' => 'Messages'], function (RouteBuilder $builder) {
+    $builder->loadPlugin('Messenger');
+    $builder->connect('/', ['action' => 'index']);
+    $builder->connect('/:action/*', [], ['routeClass' => 'DashedRoute']);
 });
 
 /**

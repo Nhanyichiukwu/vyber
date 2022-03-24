@@ -143,9 +143,7 @@ class ConnectionsTable extends AppTable
             ])
             ->contain([
                 'Correspondents' => [
-                    'Profiles' => [
-                        'UserRoles' => ['Roles']
-                    ],
+                    'Profiles' => ['Roles','Genres','Industries'],
 //                    'Connections' => [
 //                        'Correspondents' => ['Profiles']
 //                    ]

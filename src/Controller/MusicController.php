@@ -3,9 +3,10 @@ namespace App\Controller;
 
 use App\Controller\AppController;
 use App\Model\Table\BkpCategoriesTable;
-use App\Utility\CustomMessages;
+use App\Utility\ServiceMessages;
 use Cake\Controller\Exception\MissingActionException;
 use Cake\Core\Configure;
+use Cake\Event\EventInterface;
 use Cake\Http\Exception\ForbiddenException;
 use Cake\Http\Exception\InternalErrorException;
 use Cake\Http\Exception\NotFoundException;
@@ -35,13 +36,21 @@ class MusicController extends AppController
     {
         parent::initialize();
 
-        $this->loadModel('Audios');
-        $this->loadModel('Videos');
+        $this->loadModel('Medias');
         $this->loadModel('Categories');
         $this->loadModel('CategoryItems');
 
         $this->viewBuilder()->setTemplatePath('Medias/Music');
 
+    }
+
+    public function beforeRender(EventInterface $event)
+    {
+        parent::beforeRender($event);
+
+
+//        $this->set(['page_layout' => 'off-canvas-collapsed', 'sidebar' => true]);
+        $this->enableSidebar(false);
     }
 
     /**
@@ -53,53 +62,106 @@ class MusicController extends AppController
      */
     public function index()
     {
-//        $this->set('pageTitle','Hello');
+
     }
+
     /**
      * Get a list of people based on the value specified in category.
      * If category is set to null or not provided, it will default to
-     * all, which will invoke the Discover::allPeople()
+     * all, which will invoke the Explore::allPeople()
      * @param string|null $category
      * @throws \Exception
      * @throws MissingActionException
      * @throws NotFoundException
      */
-    public function display(...$path)
+//    public function display(...$path)
+//    {
+//        if (in_array('..', $path, true) || in_array('.', $path, true)) {
+//            throw new ForbiddenException();
+//        }
+//        $page = $subpage = null;
+//
+//        if (!empty($path[0])) {
+//            $page = $path[0];
+//        }
+//        if (!empty($path[1])) {
+//            $subpage = $path[1];
+//        }
+//
+//        $pageTitle = ucfirst($page) . ' ' . ucfirst($subpage);
+//
+//        $this->set(compact('page', 'subpage','pageTitle'));
+//
+//        $templatePath = implode('/', $path);
+//        $templatePath = str_replace('-','_', $templatePath);
+//
+//
+//        try {
+//            $this->viewBuilder()->setTemplate($templatePath);
+//        } catch (MissingTemplateException $exception) {
+//            if (Configure::read('debug')) {
+//                throw $exception;
+//            }
+//            throw new NotFoundException(
+//                ServiceMessages::getMissingPageMessage()
+//            );
+//        }
+//
+//        $method = '_' . lcfirst(Inflector::camelize($page));
+//        if (method_exists($this, $method)) {
+////            $this->{$method}($subpage, $path);
+//        }
+//    }
+
+    public function artists()
     {
-        if (in_array('..', $path, true) || in_array('.', $path, true)) {
-            throw new ForbiddenException();
-        }
-        $page = $subpage = null;
+        echo 'Hello';
+        exit;
+    }
 
-        if (!empty($path[0])) {
-            $page = $path[0];
-        }
-        if (!empty($path[1])) {
-            $subpage = $path[1];
-        }
+    public function albums()
+    {
 
-        $pageTitle = ucfirst($page) . ' ' . ucfirst($subpage);
+    }
 
-        $this->set(compact('page', 'subpage','pageTitle'));
+    public function genres()
+    {
 
-        $templatePath = implode('/', $path);
-        $templatePath = str_replace('-','_', $templatePath);
+    }
 
+    public function trends()
+    {
 
-        try {
-            $this->viewBuilder()->setTemplate($templatePath);
-        } catch (MissingTemplateException $exception) {
-            if (Configure::read('debug')) {
-                throw $exception;
-            }
-            throw new NotFoundException(
-                CustomMessages::getMissingPageMessage()
-            );
-        }
+    }
 
-        if (method_exists($this, $page)) {
-            $this->{$page}($subpage, $path);
-        }
+    public function discover()
+    {
+
+    }
+
+    public function producers()
+    {
+
+    }
+
+    public function directors()
+    {
+
+    }
+
+    public function choreographers()
+    {
+
+    }
+
+    public function lyricists()
+    {
+
+    }
+
+    public function songWriters()
+    {
+
     }
 
     public function myMusic(...$path)
@@ -168,135 +230,87 @@ class MusicController extends AppController
         $this->set(compact('category','categoryItems'));
     }
 
-    public function artists()
-    {
 
-    }
 
-    public function albums()
-    {
-
-    }
-
-    public function genres()
-    {
-
-    }
-
-    public function trends()
-    {
-
-    }
-
-    public function discover()
-    {
-
-    }
-
-    public function producers()
-    {
-
-    }
-
-    public function directors()
-    {
-
-    }
-
-    public function choreographers()
-    {
-
-    }
-
-    public function lyricists()
-    {
-
-    }
-
-    public function songWriters()
-    {
-
-    }
-
-    /**
-     * View method
-     *
-     * @param string|null $id Music id.
-     * @return \Cake\Http\Response|void
-     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
-     */
-    public function view($id = null)
-    {
-        $music = $this->Music->get($id, [
-            'contain' => []
-        ]);
-
-        $this->set('music', $music);
-    }
-
-    /**
-     * Add method
-     *
-     * @return \Cake\Http\Response|null Redirects on successful add, renders view otherwise.
-     */
-    public function add()
-    {
-        $music = $this->Music->newEntity();
-        if ($this->request->is('post')) {
-            $music = $this->Music->patchEntity($music, $this->request->getData());
-            if ($this->Music->save($music)) {
-                $this->Flash->success(__('The music has been saved.'));
-
-                return $this->redirect(['action' => 'index']);
-            }
-            $this->Flash->error(__('The music could not be saved. Please, try again.'));
-        }
-        $this->set(compact('music'));
-    }
-
-    /**
-     * Edit method
-     *
-     * @param string|null $id Music id.
-     * @return \Cake\Http\Response|null Redirects on successful edit, renders view otherwise.
-     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
-     */
-    public function edit($id = null)
-    {
-        $music = $this->Music->get($id, [
-            'contain' => []
-        ]);
-        if ($this->request->is(['patch', 'post', 'put'])) {
-            $music = $this->Music->patchEntity($music, $this->request->getData());
-            if ($this->Music->save($music)) {
-                $this->Flash->success(__('The music has been saved.'));
-
-                return $this->redirect(['action' => 'index']);
-            }
-            $this->Flash->error(__('The music could not be saved. Please, try again.'));
-        }
-        $this->set(compact('music'));
-    }
-
-    /**
-     * Delete method
-     *
-     * @param string|null $id Music id.
-     * @return \Cake\Http\Response|null Redirects to index.
-     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
-     */
-    public function delete($id = null)
-    {
-        $this->request->allowMethod(['post', 'delete']);
-        $music = $this->Music->get($id);
-        if ($this->Music->delete($music)) {
-            $this->Flash->success(__('The music has been deleted.'));
-        } else {
-            $this->Flash->error(__('The music could not be deleted. Please, try again.'));
-        }
-
-        return $this->redirect(['action' => 'index']);
-    }
+//    /**
+//     * View method
+//     *
+//     * @param string|null $id Music id.
+//     * @return \Cake\Http\Response|void
+//     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
+//     */
+//    public function view($id = null)
+//    {
+//        $music = $this->Music->get($id, [
+//            'contain' => []
+//        ]);
+//
+//        $this->set('music', $music);
+//    }
+//
+//    /**
+//     * Add method
+//     *
+//     * @return \Cake\Http\Response|null Redirects on successful add, renders view otherwise.
+//     */
+//    public function add()
+//    {
+//        $music = $this->Music->newEntity();
+//        if ($this->request->is('post')) {
+//            $music = $this->Music->patchEntity($music, $this->request->getData());
+//            if ($this->Music->save($music)) {
+//                $this->Flash->success(__('The music has been saved.'));
+//
+//                return $this->redirect(['action' => 'index']);
+//            }
+//            $this->Flash->error(__('The music could not be saved. Please, try again.'));
+//        }
+//        $this->set(compact('music'));
+//    }
+//
+//    /**
+//     * Edit method
+//     *
+//     * @param string|null $id Music id.
+//     * @return \Cake\Http\Response|null Redirects on successful edit, renders view otherwise.
+//     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
+//     */
+//    public function edit($id = null)
+//    {
+//        $music = $this->Music->get($id, [
+//            'contain' => []
+//        ]);
+//        if ($this->request->is(['patch', 'post', 'put'])) {
+//            $music = $this->Music->patchEntity($music, $this->request->getData());
+//            if ($this->Music->save($music)) {
+//                $this->Flash->success(__('The music has been saved.'));
+//
+//                return $this->redirect(['action' => 'index']);
+//            }
+//            $this->Flash->error(__('The music could not be saved. Please, try again.'));
+//        }
+//        $this->set(compact('music'));
+//    }
+//
+//    /**
+//     * Delete method
+//     *
+//     * @param string|null $id Music id.
+//     * @return \Cake\Http\Response|null Redirects to index.
+//     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
+//     */
+//    public function delete($id = null)
+//    {
+//        $this->request->allowMethod(['post', 'delete']);
+//        $music = $this->Music->get($id);
+//        if ($this->Music->delete($music)) {
+//            $this->Flash->success(__('The music has been deleted.'));
+//        } else {
+//            $this->Flash->error(__('The music could not be deleted. Please, try again.'));
+//        }
+//
+//        return $this->redirect(['action' => 'index']);
+//    }
 
     private function delegateRequest(array $path, $whereTo = 'action')
     {

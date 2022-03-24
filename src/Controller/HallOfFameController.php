@@ -26,7 +26,7 @@ class HallOfFameController extends AppController
         $user = $this->getActiveUser();
         if ($user && !$user->isAHallOfFamer()) {
             $this->Flash->error(__('You are not yet a Hall of Famer.'));
-            return $this->redirect('/support/hall-of-fame/how-to-become-a-member');
+            return $this->redirect('/support/faqs/how-to-become-a-hall-of-famer');
         }
     }
 

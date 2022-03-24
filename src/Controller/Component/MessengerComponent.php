@@ -16,48 +16,49 @@ class MessengerComponent extends Component
      * @var array
      */
     protected $_defaultConfig = [];
-    
+
     /**
      * The Logged in user object <br>
      * Useful in cases where a method is defined with a negligible user_refid
      * param but was called with no user_refid argument
-     * 
-     * @var \App\Model\Entity\User 
+     *
+     * @var \App\Model\Entity\User
      */
     public $user;
-    
+
     /**
      * The Table Locator object
-     * 
-     * @var \Cake\ORM\Locator\TableLocator 
+     *
+     * @var \Cake\ORM\Locator\TableLocator
      */
     protected $_tableLocator;
-    
+
     /**
-     * 
+     *
      * @var array
      */
     public $components = ['User'];
 
 
-    public function initialize(array $config) {
+    public function initialize(array $config): void
+    {
         parent::initialize($config);
-        
-        if (!$this->_tableLocator) 
+
+        if (!$this->_tableLocator)
             $this->_tableLocator = $this->getController()->getTableLocator();
-        if (!$this->user) 
+        if (!$this->user)
             $this->user = $this->getController()->getActiveUser();
     }
-    
+
     /**
      * Message Retrieval method
-     * 
+     *
      * Retrieves messages belonging to a given chat identified by refid.
      * This method returns only unread messages by default, but can be
      * manipulated to filter messages based on different filter options
      * This method is particularly handy for informing the user of new unread
      * messages
-     *  
+     *
      * @param string $chat_refid
      * @param string $filter
      * @return array A list of recently received and unread messages by default | empty array if noting was found
@@ -73,14 +74,14 @@ class MessengerComponent extends Component
             case 'read': // Messages received and read
                 $query = $query->where([
                     'Messages.author_refid !=' => $this->user->refid,
-                    'Messages.is_read =' => '1', 
+                    'Messages.is_read =' => '1',
                     'Messages.trashed =' => '0'
                 ]);
                 break;
             case 'unread': // Messages received but not yet read
                 $query = $query->where([
                     'Messages.author_refid !=' => $this->user->refid,
-                    'Messages.is_read =' => '0', 
+                    'Messages.is_read =' => '0',
                     'Messages.trashed =' => '0'
                 ]);
                 break;
@@ -98,42 +99,42 @@ class MessengerComponent extends Component
                 $query = $query->where([
                     'Messages.author_refid !=' => $this->user->refid,
                     'Messages.is_read =' => '0',
-                    'Messages.trashed =' => '1', 
+                    'Messages.trashed =' => '1',
                 ]);
                 break;
             case 'trashed_sent': // Messages received and trashed without reading, or marked as unread
                 $query = $query->where([
                     'Messages.author_refid =' => $this->user->refid,
-                    'Messages.trashed =' => '1', 
+                    'Messages.trashed =' => '1',
                 ]);
                 break;
             case 'seen':
                 $query = $query->where([
                     'Messages.author_refid !=' => $this->user->refid,
-                    'Messages.seen =' => '1', 
+                    'Messages.seen =' => '1',
                     'Messages.trashed =' => '0'
                 ]);
                 break;
             case 'has_attachment':
                 $query = $query->where([
-                    'Messages.has_attachment =' => '1', 
+                    'Messages.has_attachment =' => '1',
                     'Messages.trashed =' => '0'
                 ]);
                 break;
             case 'has_attachment_trashed':
                 $query = $query->where([
-                    'Messages.has_attachment =' => '1', 
+                    'Messages.has_attachment =' => '1',
                     'Messages.trashed =' => '1'
                 ]);
                 break;
             default:
-                $query = $query->where([ 
+                $query = $query->where([
                     'Messages.trashed =' => '0'
                 ]);
         }
         $query = $query->orderDesc('id');
         $results = (array) $query->all()->toArray();
-        
+
         array_walk($results, function (&$value, $index) {
             $value->author = $this->User->getUser($value->author_refid);
             $value->recipient = $this->User->getUser($value->recipient_refid);
@@ -141,10 +142,10 @@ class MessengerComponent extends Component
 
         return $results;
     }
-    
+
     /**
      * Fetches a single row from a given message table
-     * 
+     *
      * @param string $message_refid
      * @param string $table_name
      * @return App\Model\Entity\IncomingMessage | App\Model\Entity\OutgoingMessage
@@ -153,26 +154,26 @@ class MessengerComponent extends Component
     {
         $msgTbl = $this->_tableLocator->get('Messages');
         $message = $msgTbl->get($message_refid);
-        
+
         return $message;
     }
 
-    
+
     public function getConversation($chat_refid, $filter = null) {
         $chatsTbl = $this->_tableLocator->get('Chats');
-        
+
         $conversation = $chatsTbl->get($chat_refid, [
             'contain' => ['ChatParticipants', 'Messages']
         ]);
-        
+
         return $conversation;
     }
 
     /**
      * Chats retrieval method
-     * 
+     *
      * - Get all available chats (private/group) in which the user is a participant
-     * 
+     *
      * @param string $user_refid
      * @return array This will return either a list of chat entity objects or
      * an empty array
@@ -183,27 +184,27 @@ class MessengerComponent extends Component
             if ($this->user)
                 $user_refid = $this->user->refid;
         }
-        
+
         $chats = [];
         $ChatParticipantsTbl = $this->_tableLocator->get('ChatParticipants');
         $query = $ChatParticipantsTbl->find()->where(['participant_refid' => $user_refid]);
         $results = (array) $query->all()->toArray();
-        
+
         if (count($results)) {
             foreach ($results as $result) {
                 $chats[] = $this->getChat($result->chat_refid);
             }
         }
-        
+
         return $chats;
     }
 
-    
+
     /**
      * Chat entity retrieval method
-     * 
+     *
      * - Gets a single chat entity using its id
-     * 
+     *
      * @param string $chat_refid
      * @return \App\Model\Entity\Chat $chat | null
      */
@@ -213,16 +214,16 @@ class MessengerComponent extends Component
         $chat = $ChatsTbl->get($chat_refid);
         $chat->messages = (array) $this->getChatMessages($chat->refid);
         $chat->participants = (array) $this->getChatParticipants($chat->refid);
-        
-        
+
+
         return $chat;
     }
-    
-    
+
+
     /**
      * Participants retrieval method
      * Retrieves a comprehensive list of all participant in a given chat
-     * 
+     *
      * @param string $chat_refid
      */
     public function getChatParticipants( $chat_refid )
@@ -232,12 +233,12 @@ class MessengerComponent extends Component
 //        $query = $query->aliasField('participant_refid');
 //        $participants = (array) $query->all()->toArray();
 //        $participants = array_unique($participants);
-        
+
         $pTbl = $this->_tableLocator->get('ChatParticipants');
         $query = $pTbl->find()->where(['chat_refid' => $chat_refid]);
         $results = (array) $query->toArray();
         $participants = [];
-        
+
         if (count($results))
         {
             foreach ($results as $result)
@@ -245,12 +246,12 @@ class MessengerComponent extends Component
                 $participants[] = $this->User->getUser($result->participant_refid);
             }
         }
-        
+
         return $participants;
     }
-    
+
     /**
-     * 
+     *
      * @param string $chat_refid
      * @param string $message
      * @param mixed $attachment
@@ -261,7 +262,7 @@ class MessengerComponent extends Component
         $Outgoing = $this->_tableLocator->get('OutgoingMessages');
         $MsgAttachments = $this->_tableLocator->get('MessageAttachments');
         $chat = $this->getChat($chat_refid);
-        
+
         $messageSenderName = "$this->user->firstname $this->user->lastname";
         $messageTime = date('Y-m-d h:i:s');
         $hasAttach = ($attachments) ? '1' : '0';
@@ -269,9 +270,9 @@ class MessengerComponent extends Component
         unset($recipients[$this->user->_user_refid]);
         $totalRecipients = count($recipients);
         $failedMessagesSave = [];
-        $successfulIncomingMsgs = 
-                $successfulIncomingFileSave = $succefullIncomingFileMove = 
-                $successfulOutgoingMsg = $successfulOutgoingFileSave = 
+        $successfulIncomingMsgs =
+                $successfulIncomingFileSave = $succefullIncomingFileMove =
+                $successfulOutgoingMsg = $successfulOutgoingFileSave =
                 $successfulOutgoingFileMove = [];
 
         $msgData = [
@@ -284,14 +285,14 @@ class MessengerComponent extends Component
             'created' => $messageTime,
             'modified' => $messageTime
         ];
-        
+
         $outgoingMsg = $Outgoing->newEntity($msgData);
-        
-        foreach ( $recipients as $participant_refid ) 
+
+        foreach ( $recipients as $participant_refid )
         {
             if ($participant_refid === $this->user->user_refid)
                 continue; // Skip the sender's id if found in the recipients list
-            
+
             $recipient = $this->User->getUser($participant_refid);
             $message_refid = $this->CustomString->generateRandom(20, ['type' => 'numbers']);
             // Define the message data
@@ -307,23 +308,23 @@ class MessengerComponent extends Component
                 'created' => $messageTime,
                 'modified' => $messageTime
             ];
-            
+
             $incomingMsg = $Incoming->newEntity();
             $incomingMsg = $Incoming->patchEntity($incomingMsg, $msgData);
-            
+
             // If there are attachments, then message should only be sent when
             // the attachments are successfully saved
-            
-            
+
+
             // Try processing the attachments if their is any
             // In the future, we hope to advance this aspect of our application
             // to use Contents Delivery Networks (CDN) for file storage, in
             // order to optimize speed
-            if ($hasAttach == '1') 
+            if ($hasAttach == '1')
             {
                 $failedAttachments = $failedFileMove = [];
-                
-                foreach ($attachments as $attachment) 
+
+                foreach ($attachments as $attachment)
                 {
                     $fileFilename = $attachment->getClientFilename();
                     $fileMediaType = $attachment->getClientMediaType();
@@ -365,9 +366,9 @@ class MessengerComponent extends Component
                     }
                 }
 
-                if (!count($failedAttachments)) 
-                { 
-                // It means the attachments for this message were successfully 
+                if (!count($failedAttachments))
+                {
+                // It means the attachments for this message were successfully
                 //inserted into the db
                     if (!$Incoming->save($incomingMsg)) {
                         $failedMessagesSave[] = $incomingMsg;
@@ -383,16 +384,16 @@ class MessengerComponent extends Component
                 }
             }
         }
-        
+
         // Confirming the total number of messages failed to save before
         // proceeding to insert the sender record
-        if (count($failedMessagesSave) < $totalRecipients) 
+        if (count($failedMessagesSave) < $totalRecipients)
         {
-            if ($hasAttach == '1') 
+            if ($hasAttach == '1')
             {
                 $failedAttachments = $failedFileMove = [];
-                
-                foreach ($attachments as $attachment) 
+
+                foreach ($attachments as $attachment)
                 {
                     $fileFilename = $attachment->getClientFilename();
                     $fileMediaType = $attachment->getClientMediaType();
@@ -434,9 +435,9 @@ class MessengerComponent extends Component
                     }
                 }
 
-                if (!count($failedAttachments)) 
-                { 
-                // It means the attachments for this message were successfully 
+                if (!count($failedAttachments))
+                {
+                // It means the attachments for this message were successfully
                 //inserted into the db
                     if (!$Incoming->save($incomingMsg)) {
                         $failedMessagesSave[] = $incomingMsg;
@@ -452,9 +453,9 @@ class MessengerComponent extends Component
                 }
             }
             if ($Outgoing->save($outgoingMsg)) {
-                
+
                 return true;
-            } else { 
+            } else {
                 // Since the outgoing part failed to save, we delete every
                 // data saved and return a failure response to the sender
                 foreach ($successfulAttachments as $attachment ) {
@@ -468,7 +469,7 @@ class MessengerComponent extends Component
                 foreach ($successfulMessagesSave as $successfulMsg) {
                     $Incoming->delete($successfulMsg);
                 }
-                
+
                 return false;
             }
         }

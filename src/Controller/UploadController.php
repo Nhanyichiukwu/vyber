@@ -28,19 +28,19 @@ use Cake\Utility\Security;
  *
  *
  * @method \App\Model\Entity\Upload[]|\Cake\Datasource\ResultSetInterface paginate($object = null, array $settings = [])
- * @property \App\Model\Table\MediasTable $Medias
+ * @property \App\Model\Table\Medias2Table $Medias
  */
 class UploadController extends AppController
 {
     public $mediaType;
-    
+
     /**
      *
      * @var array
      * @access protected
      */
     protected $_privacy = array ('public', 'protected', 'connections','mutual_connection');
-    
+
     /**
      *
      * @var array Media Orientation options
@@ -50,24 +50,24 @@ class UploadController extends AppController
         'landscape'     => 'Landscape',
         'portrait'      => 'Portrait'
     );
-    
+
     /**
      *
      * @var array Monetisation option
      * @access protected
      */
     protected $_monetize = array (
-        '0' => 'No', 
+        '0' => 'No',
         '1' => 'Yes'
     );
-    
+
     /**
      *
      * @var array List of Available licenses
      * @access protected
      */
     protected $_licenses = array ();
-    
+
     /**
      *
      * @var array Age Restriction
@@ -76,10 +76,10 @@ class UploadController extends AppController
     protected $_ageRestriction = array(
         'No Restriction', '13+', '16+', '18+', '25+', '30+', '40+', '50+'
     );
-    
+
     /**
      *
-     * @var array 
+     * @var array
      * @access protected
      */
     protected $_contentClassifications = array(
@@ -94,7 +94,7 @@ class UploadController extends AppController
     protected $_statusList = array(
         'published' => 'Published', 'pending' => 'Pending'
     );
-    
+
     /**
      *
      * @var array
@@ -147,11 +147,11 @@ class UploadController extends AppController
     );
 
     /**
-     * @staticvar The uploads directory for user video, audio, and image files
-     * Each media type is stored in its specific folder, ie: videos in /uploads/videos/
-     * and audios in /uploads/audios/
+     * @staticvar The public-files directory for user video, audio, and image files
+     * Each media type is stored in its specific folder, ie: videos in /public-files/videos/
+     * and audios in /public-files/audios/
      */
-    const UPLOAD_DIR = WWW_ROOT . 'uploads' . DS;
+    const UPLOAD_DIR = WWW_ROOT . 'public-files' . DS;
     const MAX_ACCEPTABLE_FILESIZE = 60000000;
 
     public function initialize() {
@@ -164,19 +164,19 @@ class UploadController extends AppController
         $this->loadModel('Reviews');
         $this->loadModel('Posts');
         $this->loadModel('Comments');
-        
+
         $this->loadComponent('CustomString');
     }
-    
+
     public function beforeFilter(\Cake\Event\Event $event) {
         parent::beforeFilter($event);
-        
-        
+
+
     }
-    
+
     public function beforeRender(\Cake\Event\Event $event) {
         parent::beforeRender($event);
-        
+
         if ($this->getRequest()->getQuery('request_origin') === 'container') {
             $this->viewBuilder()
                     ->setLayoutPath('/')
@@ -198,7 +198,7 @@ class UploadController extends AppController
     {
         $request = $this->getRequest();
         // Warning! This commented line must not be removed
-        // 
+        //
 //        if ($request->getCookie('PendingUpload')) {
 //            $this->Flash->info('You have a pending upload...');
 //            return $this->redirect (['action' => 'pending']);
@@ -206,15 +206,15 @@ class UploadController extends AppController
 
         // Limit the type of uploadable file to the one selected by the user
         $this->_defineFileType();
-        
-        
+
+
     }
-    
+
     public function photo(...$path)
     {
         $request = $this->getRequest();
         $this->_defineFileType();
-        
+
         if ($request->is(['post','ajax'])) {
             if (!empty($request->getUploadedFiles())) {
                 $uploadedPhotos = $request->getUploadedFiles()['photo'];
@@ -226,40 +226,40 @@ class UploadController extends AppController
 
                 $this->set('photos', $photos);
             }
-            
+
             if ($request->getData('details')) {
                 $data = $request->getData();
             }
         }
-        
+
     }
-    
-    public function audio(...$path) 
+
+    public function audio(...$path)
     {
         $fileType = 'audio';
         $acceptedTypes = $this->_getValidFileTypes('audio');
         $this->set(compact('fileType', 'acceptedTypes'));
-        
+
         return $this->media($path);
     }
-    
-    public function video(...$path) 
+
+    public function video(...$path)
     {
         $fileType = 'video';
         $acceptedTypes = $this->_getValidFileTypes('video');
         $this->set(compact('fileType', 'acceptedTypes'));
-        
+
         return $this->media($path);
     }
 
 
     /**
-     * Handles media upload only via ajax post request. 
+     * Handles media upload only via ajax post request.
      *
      * @return \Cake\Http\Response
      * @throws \Cake\Http\Exception\ForbiddenException
      */
-    public function media(... $path) 
+    public function media(... $path)
     {
         $request = $this->getRequest();
         if ($request->is(['post','ajax'])) {
@@ -294,7 +294,7 @@ class UploadController extends AppController
             // Get the user's location if available;
             $location = '';
             if (!(empty($this->VisitorsHandler->getVisitor()->get('country')) &&
-                    empty($this->VisitorsHandler->getVisitor()->get('region')))) 
+                    empty($this->VisitorsHandler->getVisitor()->get('region'))))
             {
                 $location = serialize([
                     'country' => $this->VisitorsHandler->getVisitor()->get('country'),
@@ -302,24 +302,24 @@ class UploadController extends AppController
                     'city' => $this->VisitorsHandler->getVisitor()->get('city')
                 ]);
             }
-            
+
             // In case the album does not exists
             if (!empty($album)) {
                 if (! $this->Albums->exists([
-                    'refid' => $album, 
-                    'owner_refid' => $user->refid, 
+                    'refid' => $album,
+                    'owner_refid' => $user->refid,
                     'type' => FileManager::getFileType($uploadedFile->mimeType)
                 ])) {
                     $album = null;
                 }
             }
-            
-            
+
+
             // Poster/Thumbnail/Cover Image
             if ($request->getUploadedFiles()) {
                 $thumbnail = $request->getUploadedFile('thumbnail');
 
-                if ($thumbnail) 
+                if ($thumbnail)
                 {
                     $thumbExt = FileManager::getFileExtension($thumbnail->getClientFilename());
                     if (!in_array($thumbExt, ['jpg','jpeg'])) {
@@ -327,12 +327,12 @@ class UploadController extends AppController
                         return;
                     }
                     $thumbFilename = 'thumb_' . $timestamp . '_' . $uuid . '.' . $thumbExt;
-                    $thumbFilepath = $user->get('refid') . DS 
+                    $thumbFilepath = $user->get('refid') . DS
                             . Inflector::pluralize($mediaType) . DS . $thumbFilename;
                     $thumbDestination = $uploadDir->path . DS . $thumbFilepath;
                 }
             }
-            
+
             $newMediaDetails = [
                 'refid'                 => $refid,
                 'title'                 => $title,
@@ -367,18 +367,18 @@ class UploadController extends AppController
                 'release_date'          => $release_date
             ];
         }
-        
+
         $mediaType = $request->getQuery('mtp');
         $classification = $request->getQuery('cls');
-        
+
         if ($mediaType === 'audio')
             $equiv = 'video';
         else
             $equiv = 'audio';
-        
+
         $acceptedTypes = $this->_getValidFileTypes($mediaType);
         $this->set(compact('mediaType', 'acceptedTypes'));
-        
+
         // View Vars
         $validOrientations = $this->_getMediaOrientations();
         $genres = (array) $this->_getGenres()->chunk(6)->toArray();
@@ -393,17 +393,17 @@ class UploadController extends AppController
         $ageRanges = $this->_ageRestriction;
         $statusList = $this->_statusList;
         $contentClassifications = $this->_contentClassifications;
-        
+
         $this->set(compact(
-            'mediaType', 
-            'equiv', 
+            'mediaType',
+            'equiv',
             'categories',
-            'genres', 
-            'validOrientations', 
-            'privacyOptions', 
-            'monetizationOptions', 
-            'licenseOptions', 
-            'languages', 
+            'genres',
+            'validOrientations',
+            'privacyOptions',
+            'monetizationOptions',
+            'licenseOptions',
+            'languages',
             'userSettings',
             'ageRanges',
             'classification',
@@ -411,41 +411,41 @@ class UploadController extends AppController
             'statusList'
         ));
     }
-    
+
     /**
-     * 
+     *
      * @param array $path
      */
     public function doc(...$path)
     {
-        
+
     }
-    
+
     /**
-     * 
+     *
      * @param array $path
      */
     public function all(...$path)
     {
-        
+
     }
-    
+
     private function _defineFileType() {
         $fileType = $this->getRequest()->getQuery('file_type');
         if ($fileType)
             $acceptedTypes = $this->_getValidFileTypes($fileType);
         else
             $acceptedTypes = $this->_getValidFileTypes();
-        
+
         $this->set(compact('fileType','acceptedTypes'));
     }
-    
+
     /**
      * Upload processing endpoint
-     * 
+     *
      * Handles all upload requests and internally calls the appropriate processor
      * depending on the file type
-     * 
+     *
      * @param type $path
      * @return type
      */
@@ -453,7 +453,7 @@ class UploadController extends AppController
     {
         $request = $this->getRequest();
         $this->autoRender = false;
-        
+
         if ($request->is(['post', 'ajax'])) {
             $processor = 'basic';
             if (count($path)) {
@@ -463,16 +463,16 @@ class UploadController extends AppController
                     $processor = 'media';
             $processor .= 'UploadProcessor';
             $processor = '__' . $processor;
-            
+
             if ($this->hasAction($processor)) {
                 $this->{$processor}();
             }
         }
-        
+
         return null;
     }
-    
-    public function __mediaUploadProcessor() 
+
+    public function __mediaUploadProcessor()
     {
         $request = $this->getRequest();
         $response = $this->getResponse();
@@ -482,8 +482,8 @@ class UploadController extends AppController
         $uploadedFile = $request->getUploadedFile('file');
         $classification = $this->CustomString->sanitize($request->getData('classification'));
         $isOK = (bool) true;
-        
-        
+
+
         // Limit upload size to the size specified in the UploadController::MAX_ACCEPTABLE_FILESIZE
         if ($uploadedFile->getSize() > static::MAX_ACCEPTABLE_FILESIZE) {
             $msg = json_encode(['status' => 'error', 'message' => 'Oops! The filesize exceeds limit of 60MB.']);
@@ -498,7 +498,7 @@ class UploadController extends AppController
             $mediaType = FileManager::getFileType($mimeType);
             $uploadDir = FileManager::getUploadDir([$user->get('refid'), Inflector::pluralize($mediaType)]);
 
-            // A unique new name for the file, starting with the first 3 
+            // A unique new name for the file, starting with the first 3
             // letters from the file type (eg: video = 'vid'; audio = 'aud'),
             // then the current timetamp and a 64 chars long random string
             $timestamp =        date('YmdHis');
@@ -524,17 +524,17 @@ class UploadController extends AppController
             $medias = $this->Medias;
             $media = $medias->newEntity($newMediaDetails);
             $medias->getConnection()->transactional(
-                    function ($connection) 
+                    function ($connection)
                     use ($medias, $media, $uploadedFile, $fileDestination, &$isOK) {
 //                $response = $this->getResponse();
-                
+
                 // If the database operation tests OK, then we proceed with
                 // moving the file to the appropriate destination
                 // And if that fails, we rollback all operations
                 if ($medias->save($media, ['atomic' => false])) {
                     try {
                         $uploadedFile->moveTo($fileDestination);
-                        
+
                         // If the script runs upto this point, it means there
                         // was no error in the file transfer
                         $connection->commit();
@@ -546,12 +546,12 @@ class UploadController extends AppController
                     $isOK = false;
                 }
             });
-            
+
             // Read the error status and return the appropriate response
             if ($isOK) {
                 if ($isAjax) {
                     $message = json_encode([
-                        'status' => 'success', 
+                        'status' => 'success',
                         'message' => 'Upload Completed',
                         'permalink' => $permalink,
                         'refid' => $refid
@@ -568,13 +568,13 @@ class UploadController extends AppController
                     $this->Flash->error(__('Upload failed!'));
                 }
             }
-            
+
             $this->setResponse($response);
         }
     }
 
 
-    
+
 
     protected function _getValidFileTypes($type = null)
     {
@@ -587,20 +587,20 @@ class UploadController extends AppController
             }
             $types = array_unique($types);
         }
-        
+
         return $types;
     }
 
 
-    public function pending() 
+    public function pending()
     {
         $request = $this->getRequest();
 //        $this->viewBuilder()->setTemplate('file_details');
-        
+
         $session = $request->getSession();
         $isPost = $request->is('post');
         $user = $this->getActiveUser();
-        
+
         // Just in case a user dives directly on to this page when they have
         // no pending upload, kick them out
         $pendingUpload = $this->_getPendingUpload();
@@ -608,7 +608,7 @@ class UploadController extends AppController
             $this->Flash->error('You have no pending upload...');
             return $this->redirect(['action' => 'index']);
         }
-        
+
         $this->set('pendingUpload', $pendingUpload);
 //        $File = new File($fileTmpLocation);
 //        if (! $File->exists()) {
@@ -616,14 +616,14 @@ class UploadController extends AppController
 //                    ->withExpiredCookie('PendingUpload')
 //                    ->withLocation(['action' => 'index']);
 //        }
-        
+
         // Full URL of the file
-//        $fileUri = $this->FileManager->getFileUri('uri',  $user->get('refid') 
+//        $fileUri = $this->FileManager->getFileUri('uri',  $user->get('refid')
 //                . '/' . Inflector::pluralize($fileType) . '/' . $newMediaName);
-        
+
 //        $Medias = $this->getTableLocator()->get('Medias');
 //        $media = $Medias->newEntity();
-        
+
 //        if ($isPost)
 //        {
 //            // Gathering form Data
@@ -650,11 +650,11 @@ class UploadController extends AppController
 //            $ageRestriction = $this->CustomString->sanitize($request->getData('age_restriction'));
 //            $status = $this->CustomString->sanitize($request->getData('status'));
 //            $datetime = date('Y-m-d H:i:s');
-//            
+//
 //            // Get the user's location if available;
 //            $location = '';
 //            if (!(empty($this->VisitorsHandler->getVisitor()->get('country')) &&
-//                    empty($this->VisitorsHandler->getVisitor()->get('region')))) 
+//                    empty($this->VisitorsHandler->getVisitor()->get('region'))))
 //            {
 //                $location = json_encode([
 //                    'country' => $this->VisitorsHandler->getVisitor()->get('country'),
@@ -662,19 +662,19 @@ class UploadController extends AppController
 //                    'city' => $this->VisitorsHandler->getVisitor()->get('city')
 //                ]);
 //            }
-//            
+//
 //            // In case the album does not exists
 //            if (!empty($album)) {
 //                if (! $this->Albums->exists([
-//                    'refid' => $album, 
-//                    'owner_refid' => $user->refid, 
+//                    'refid' => $album,
+//                    'owner_refid' => $user->refid,
 //                    'type' => FileManager::getFileType($pendingUpload->mimeType)
 //                ])) {
 //                    $album = null;
 //                }
 //            }
-//            
-//            
+//
+//
 //            $RString = new RandomString();
 //            $refid = $RString->generateString(20);
 //            $randomStr = $RString->generateString(32, 'mixed');
@@ -686,22 +686,22 @@ class UploadController extends AppController
 //                        Inflector::pluralize($fileType)
 //                    ]);
 //
-//            // A unique new name for the file, starting with the first 3 
+//            // A unique new name for the file, starting with the first 3
 //            // letters from the file type (eg: video = 'vid'; audio = 'aud'),
 //            // then the current timetamp and a 64 chars long random bit
 //            $timestamp = \date('YmdHis');
 //            $uuid = Text::uuid();
-//            $newMediaName = substr($fileType, 0, 3) . '_' . $timestamp 
-//                    . '_' . $uuid . '.' 
+//            $newMediaName = substr($fileType, 0, 3) . '_' . $timestamp
+//                    . '_' . $uuid . '.'
 //                    . FileManager::getFileExtension($pendingUpload->name);
 //            $fileDestination = $uploadDir->path . DS . $newMediaName;
-//            $filePath = $user->get('refid') . DS . Inflector::pluralize($fileType) 
+//            $filePath = $user->get('refid') . DS . Inflector::pluralize($fileType)
 //                    . DS . $newMediaName;
-//            
+//
 //            // Poster/Thumbnail/Cover Image
 //            $thumbnail = $request->getUploadedFile('thumbnail');
-//            
-//            if ($thumbnail) 
+//
+//            if ($thumbnail)
 //            {
 //                $thumbExt = FileManager::getFileExtension($thumbnail->getClientFilename());
 //                if (!in_array($thumbExt, ['jpg','jpeg'])) {
@@ -709,11 +709,11 @@ class UploadController extends AppController
 //                    return;
 //                }
 //                $thumbFilename = 'thumb_' . $timestamp . '_' . $uuid . '.' . $thumbExt;
-//                $thumbFilepath = $user->get('refid') . DS 
+//                $thumbFilepath = $user->get('refid') . DS
 //                        . Inflector::pluralize($fileType) . DS . $thumbFilename;
 //                $thumbDestination = $uploadDir->path . DS . $thumbFilepath;
 //            }
-//    
+//
 //            $refid = $RString->generateString(20);
 //            $newMediaDetails = [
 //                'refid'                 => $refid,
@@ -745,24 +745,24 @@ class UploadController extends AppController
 //                'created'               => $datetime,
 //                'modified'              => $datetime
 //            ];
-//    
+//
 //            $media = $this->Medias->patchEntity($media, $newMediaDetails);
 //            $conx = $this->Medias->getConnection();
 //
-//            if ($this->Medias->save($media, ['atomic' => false])) 
+//            if ($this->Medias->save($media, ['atomic' => false]))
 //            {
 //                // Create permalink and shorten the urls
 ////                $url = $this->generatePermalink($mediaFiletype, $media->ref_id);
 ////                $UrlShortener = $this->UrlShortener;
 ////                $url_short_code = $UrlShortener->shorten($url);
-//    
+//
 //                // Upload the files to the appropriate location on the server
 //                try {
 ////                    $destination = $this->FileManager
 ////                            ->findOrCreateDirectory($mediaLocation);
 ////                    $thumb_destination = $this->FileManager
 ////                            ->findOrCreateDirectory($imagesUploadDir);
-////    
+////
 ////                    $files = array(
 ////                        [
 ////                            'location' => $media_tmp_location,
@@ -773,7 +773,7 @@ class UploadController extends AppController
 ////                            'destination' => $thumb_filepath
 ////                        ]
 ////                    );
-//                    
+//
 //                    $FileManager = new FileManager();
 //                    if (
 //                            $FileManager
@@ -782,10 +782,10 @@ class UploadController extends AppController
 //                            $thumbnail->moveTo($thumbDestination)
 //                        ) {
 //                        $this->Flash->success(_("{$fileType} Saved"));
-//                        
+//
 ////                      Commit the transaction
 //                        $conx->commit();
-//                        
+//
 //                        return $this->getResponse()->withLocation([
 //                            'controller' => 'media-player'
 //                        ]);
@@ -808,8 +808,8 @@ class UploadController extends AppController
 ////                $this->redirect($referrer);
 ////            }
 //        }
-        
-            
+
+
         // View Vars
 //        $validOrientations = $this->_getMediaOrientations();
 //        $genres = (array) $this->_getGenres()->chunk(6)->toArray();
@@ -824,41 +824,41 @@ class UploadController extends AppController
 //        $ageRanges = $this->_ageRestriction;
 //        $contentDefinitions = $this->_contentDefinitions;
 //        $statusList = $this->_statusList;
-        
+
 //        $this->set(compact(
 //                'media',
-//                'tmpFile', 
-//                'categories', 
-//                'albums', 
-//                'playlists', 
-//                'genres', 
-//                'validOrientations', 
-//                'privacyOptions', 
-//                'monetizationOptions', 
-//                'licenseOptions', 
-//                'languages', 
+//                'tmpFile',
+//                'categories',
+//                'albums',
+//                'playlists',
+//                'genres',
+//                'validOrientations',
+//                'privacyOptions',
+//                'monetizationOptions',
+//                'licenseOptions',
+//                'languages',
 //                'userSettings',
 //                'ageRanges',
 //                'contentDefinitions',
 //                'statusList'));
     }
-    
-    
-    
+
+
+
     /**
      * Upload process abortion method
-     * 
+     *
      * This will abort an active upload process and delete the temporary file
      * that was previously created and also deletes the cookie
      * data.
-     * 
+     *
      * @return Http redirect
      */
     public function abort()
     {
         $this->autoRender = false;
         $request = $this->getRequest();
-        $response = $this->getResponse();       
+        $response = $this->getResponse();
         $cookies = $request->getCookieCollection();
         $pendingUpload = $this->_getPendingUpload();
         if ($pendingUpload) {
@@ -869,44 +869,44 @@ class UploadController extends AppController
 //        $pendingUploadCookie = $pendingUploadCookie->withExpired();
             $response = $response->withExpiredCookie('PendingUpload');
             $this->setResponse($response);
-            
+
             $this->Flash->success(__('Upload aborted successfully...'));
 //            return $this->redirect(['action' => 'index']);
         }
     }
-    
+
     public function oldAbort()
     {
         $this->autoRender = false;
         $request = $this->getRequest();
-        $response = $this->getResponse();       
+        $response = $this->getResponse();
         $cookieParams = $request->getCookieParams();
         $cookieName = 'PendingUpload';
         $pendingUpload = null;
-        
+
         if (array_key_exists($cookieName, $cookieParams)) {
             $pendingUpload = $cookieParams[$cookieName];
             unset($cookieParams[$cookieName]);
             $cookieCollection = new CookieCollection();
-            
+
             foreach ($cookieParams as $key => $value) {
                 $cookie = $request->getCookieCollection()->get($key);
                 $cookieCollection = $cookieCollection->add($cookie);
                 //$cookieCollection = $cookieCollection->addToRequest($request, [$key => $value]);
                 $response = $response->withCookie($cookie);
             }
-            
+
             $request = $request->withCookieCollection($cookieCollection);
             $this->setRequest($request);
             $this->setResponse($response);
-            
+
             return $this->setAction('checkIfIsAborted');
         }
-        
+
         $this->Flash->error(_('Sorry, but there is no pending upload session'));
         return $this->redirect(['action' => 'index']);
     }
-    
+
     public function checkIfIsAborted()
     {
 //        $cookie = new CookieCollection();
@@ -914,45 +914,45 @@ class UploadController extends AppController
         //print_r($this->getRequest()->getCookieCollection());
         // Try renewing the request instance
 //            $request = $this->getRequest();
-            
+
 //            $pendingUploadValue = json_decode($pendingUpload->getValue(), false);
 
 //            if (file_exists($pendingUploadValue->tmp_location)) {
 //                unlink($pendingUploadValue->tmp_location);
 //            }
-            
+
             $this->Flash->info(_('You have canceled your previous upload process!'));
             return $this->redirect(['action' => 'index']);
 //            $response = $response->withLocation('../upload');
 //            print_r($response->getCookieCollection());
 //            exit;
     }
-    
-    
 
-    public function uploadComplete() 
+
+
+    public function uploadComplete()
     {
         $session = $this->getRequest()->getSession();
-        
+
         $media_type = $session->read('media_type');
         $short_url = $session->read('short_url');
     }
-    
-    protected function _getPrivacySettings() 
+
+    protected function _getPrivacySettings()
     {
         return $this->_privacy;
     }
 
-    protected function _getMonetizationOptions() 
+    protected function _getMonetizationOptions()
     {
         return $this->_monetize;
     }
 
-    protected function _getLicenseOptions() 
+    protected function _getLicenseOptions()
     {
         return $this->_licenses;
     }
-    
+
     protected function _getMediaOrientations()
     {
         return $this->_orientations;
@@ -966,14 +966,14 @@ class UploadController extends AppController
         ];
 
         $randomKey = $this->CustomString->generateRandom(16);
-        $permalink = $this->request->getAttribute('base') . '/' . 
-                $types[$type]['controller'] . '/' . 
+        $permalink = $this->request->getAttribute('base') . '/' .
+                $types[$type]['controller'] . '/' .
                 $types[$type]['action'] . '/?' . substr($type, 0, 1) . '=' . $ref_id;
-        
+
         return $permalink;
     }
-    
-    
+
+
     protected function _getFileRepository($filetype)
     {
         $repository = null;
@@ -991,24 +991,24 @@ class UploadController extends AppController
             default :
                 $repository = 'files';
         }
-        
+
         return $repository;
     }
-    
+
     protected function _getAgeRestriction()
     {
         return $this->_ageRestriction;
     }
-    
+
     protected function _getContentClassifications()
     {
         return $this->_contentClassifications;
     }
-    
-    protected function _getPendingUpload() 
+
+    protected function _getPendingUpload()
     {
         $request = $this->getRequest();
-        
+
 /* @var $pendingUpload Cookie */
         $pendingUpload = $request->getCookie('PendingUpload');
 
@@ -1016,7 +1016,7 @@ class UploadController extends AppController
         if ( !$pendingUpload ) {
             return false;
         }
-        
+
         $pendingFile = unserialize($pendingUpload);
 
         // Main Media
@@ -1037,19 +1037,19 @@ class UploadController extends AppController
 //            'filetype' => $fileType,
 //            'size' => $fileSize
 //        );
-        
+
         return $pendingFile;
     }
-    
+
     public function _processUpload($uploadedFile, $name = 'PendingUpload') {
         $request = $this->getRequest();
         $response = $this->getResponse();
         $isAjax = $request->is('ajax');
         $isPost = $request->is('post');
-        
+
 
         // Limit upload size to the size specified in self::MAX_ACCEPTABLE_FILESIZE
-//        
+//
             $cookies = $request->getCookieCollection();
             if ($cookies->has($name)) {
                 $existingCookies = $request->getCookie($name);
@@ -1070,7 +1070,7 @@ class UploadController extends AppController
 
             $this->setResponse($response);
     }
-    
+
     private function _uploadedFileHasErrors($uploadedFile) {
 //        if ($uploadedFile->getSize() > static::MAX_ACCEPTABLE_FILESIZE) {
 //            $msg = json_encode(['status' => 'error', 'message' => 'Oops! The filesize exceeds limit of 60MB.']);
@@ -1081,20 +1081,20 @@ class UploadController extends AppController
     }
 
     /**
-     * 
+     *
      * @param string $form
      * @return response|null
      * @throws MissingTemplateException
      * @throws NotFoundException
      */
-//    public function addFileInfo($fileType = null) 
+//    public function addFileInfo($fileType = null)
 //    {
 //        if (!$fileType)
 //            $fileType = 'basic';
 //        $form = $fileType;
 //        if (in_array($fileType, ['audio','video']))
 //            $form = 'media';
-//        
+//
 //        $tpl = 'file_info_form/' . $form;
 //
 //        try {
@@ -1106,7 +1106,7 @@ class UploadController extends AppController
 //
 //            throw new NotFoundException();
 //        }
-//        
+//
 //        // The method below is a hook to prepare the view vars and/or handle the
 //        // form submission
 //        $this->set('fileType', $fileType);
@@ -1115,8 +1115,8 @@ class UploadController extends AppController
 //            return $this->{$action}($fileType);
 //        }
 //    }
-//    
-//    private function __addMediaInfo($fileType) 
+//
+//    private function __addMediaInfo($fileType)
 //    {
 //        $request = $this->getRequest();
 //        if ($fileType === 'audio')
@@ -1137,17 +1137,17 @@ class UploadController extends AppController
 //        $ageRanges = $this->_ageRestriction;
 //        $contentClassification = $this->_contentClassifications;
 //        $statusList = $this->_statusList;
-//        
+//
 //        $this->set(compact(
-//            'fileType', 
-//            'equiv', 
+//            'fileType',
+//            'equiv',
 //            'categories',
-//            'genres', 
-//            'validOrientations', 
-//            'privacyOptions', 
-//            'monetizationOptions', 
-//            'licenseOptions', 
-//            'languages', 
+//            'genres',
+//            'validOrientations',
+//            'privacyOptions',
+//            'monetizationOptions',
+//            'licenseOptions',
+//            'languages',
 //            'userSettings',
 //            'ageRanges',
 //            'contentClassification',

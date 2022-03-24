@@ -2,11 +2,17 @@
 namespace App\Controller;
 
 use App\Controller\AppController;
+use App\Utility\CustomString;
 use App\Utility\RandomString;
 use App\Utility\FileManager;
+use Cake\Core\Configure;
+use Cake\Datasource\Exception\RecordNotFoundException;
+use Cake\Http\Exception\NotFoundException;
 use Cake\Http\Response;
 use Cake\Utility\Security;
 use Cake\ORM\Exception as DbException;
+use Cake\Utility\Text;
+use Laminas\Diactoros\UploadedFile;
 
 /**
  * Events Controller
@@ -15,14 +21,12 @@ use Cake\ORM\Exception as DbException;
  * @property \App\Model\Table\EventTypesTable $EventTypes
  * @property \App\Model\Table\EventVenuesTable $EventVenues
  * @property \App\Model\Table\EventGuestsTable $EventGuests
+ * @property \App\Controller\Component\FileManagerComponent $FileManager
  *
  * @method \App\Model\Entity\Event[]|\Cake\Datasource\ResultSetInterface paginate($object = null, array $settings = [])
  */
 class EventsController extends AppController
 {
-
-    const  UPLOAD_DIR = WWW_ROOT . DS . 'uploads';
-
     public function initialize(): void
     {
         parent::initialize();
@@ -31,6 +35,10 @@ class EventsController extends AppController
         $this->loadModel('EventTypes');
         $this->loadModel('EventVenues');
         $this->loadModel('EventGuests');
+
+        $this->loadComponent('FileManager');
+        $this->enableSidebar(false);
+        $this->collapseOffCanvas(true);
 
 //        $this->viewBuilder()->setLayout('left_sidebar');
     }
@@ -42,7 +50,22 @@ class EventsController extends AppController
      */
     public function index()
     {
-        $events = $this->paginate($this->Events, ['conditions' => ['user_refid' => $this->getActiveUser()->refid]]);
+//        $arr = array('hello','world','foo','bar','more','items','for','the','array');
+//        $key = array_keys($arr, 'world')[0];
+//        $position = 2;
+//        $widget = 'barz';
+//        $fromInsertionPoint = array_slice($arr, $position);
+//        $newArr = array_slice($arr, 0, $position, true);
+//        $newArr[$position] = $widget;
+//        $resultingArr = array_merge($newArr, $fromInsertionPoint);
+//        pr($resultingArr);
+//        exit;
+
+        $options = [
+            'user' => $this->getActiveUser()->refid,
+        ];
+        $events = $this->Events->find('allForUser', $options);
+        $events = $this->paginate($events);
 
         $this->set(compact('events'));
     }
@@ -69,74 +92,172 @@ class EventsController extends AppController
 
     /**
      *
-     * @return Response|null
+     * @return \Cake\Http\Response|null|void
      */
-    public function create(): Response
+    public function create()
     {
         $request = $this->getRequest();
         $response = $this->getResponse();
-        $event = $this->Events->newEntity();
-        $eventTypes = $this->EventTypes->find('all')->select(['id','name'])->all();
-        $typeList = [];
-        $eventTypes->each(function ($type) use (&$typeList) {
-            $typeList[$type->id] = $type->name;
-        });
+        $event = $this->Events->newEmptyEntity();
+        $error = 0;
 
         if ($request->is(['post','put'])) {
-            $user = $request->getData('user_refid');
-            $hostName = $request->getData('host_name');
-            $title = $request->getData('event_title');
-            $desc = $request->getData('description');
-            $type = (int) $request->getData('event_type');
-            $privacy = $request->getData('privacy');
+            $postData = collection($request->getData())->map(function ($value, $index) {
+                if (is_string($value)) {
+                    return CustomString::sanitize($value);
+                }
+                return $value;
+            })
+                ->toArray();
             $datetime = $this->getCurrentDateTime();
             $refid = RandomString::generateUniqueID(function($id) {
                 return $this->Events->exists(['refid' => $id]);
             }, 20, 'numbers');
+            $postData['refid'] = $refid;
+            $postData['created'] = $datetime;
+            $postData['modified'] = $datetime;
+            unset($postData['media']);
+            $event = $this->Events->patchEntity($event, $postData);
 
-            $newEvent = [
-                'refid' => $refid,
-                'user_refid' => $user,
-                'host_name' => $hostName,
-                'title' => $title,
-                'description' => $desc,
-                'event_type_id' => $type,
-                'privacy' => $privacy,
-                'created' => $datetime,
-                'modified' => $datetime
-            ];
+//            $newEvent = [
+//                'refid' => $refid,
+//                'user_refid' => $user,
+//                'hostname' => $hostName,
+//                'title' => $title,
+//                'description' => $desc,
+//                'event_type_id' => $type,
+//                'privacy' => $privacy,
+//                'created' => $datetime,
+//                'modified' => $datetime
+//            ];
 
-            $event = $this->Events->patchEntity($event, $newEvent);
             if ($event->hasErrors()) {
-                $response = $response->withStatus('500', 'Internal Server Error');
-                return $response;
+                $error = 1;
+            } else {
+                /* @var $media \Laminas\Diactoros\UploadedFile*/
+                $media = $request->getUploadedFile('media');
+                $destination = $this->FileManager->getUploadDir($event->user_refid,  ['media','event-medias']);
+                $fileSaved = $this->FileManager->saveFile($media, $destination->path);
+                if (false === $fileSaved) {
+                    $error = 1;
+                } else {
+                    $event->set(
+                        'media',
+                        substr($fileSaved['file_path'], strlen($destination->path))
+                    );
+                    if (!$this->Events->save($event)) {
+                        $error = 1;
+                    }
+                }
             }
 
-            $uploadedFiles = $request->getUploadedFiles();
-            /* @var $thumb Zend\Diactoros\UploadedFile */
-            $thumb = $uploadedFiles['image'];
-            $destination = rtrim(WWW_ROOT, DS) . DS . 'media' . DS . 'photos';
-            $fileSaved = FileManager::saveFile($thumb, $destination);
-            if (false === $fileSaved) {
-                $response = $response->withStatus('500', 'Internal Server Error');
-                return $response;
-            }
-            $event->set('image', substr($fileSaved['file_path'], strlen(self::UPLOAD_DIR)));
-            if (!$this->Events->save($event)) {
-                $response = $response->withStatus('500', 'Internal Server Error');
-                return $response;
-            }
+            if ($error === 0) {
+                $success = 'Event saved. Add a venue to your event';
+                $response = $response
+                    ->withStatus(200, 'success')
+                    ->withStringBody($success);
+                if ($request->is('ajax')) {
+                    return $response;
+                }
 
-            $response = $response->withStatus(200, 'success')->withStringBody('Success');
-            if ($request->is('ajax')) {
-                return $response;
+                $this->Flash->info($success);
+                $this->redirect(['action' => 'add-venue', $event->refid]);
             }
-
-            $this->setResponse($response);
-            $this->Flash->success(__('Success'));
+            $msg = 'Oops! Unable to create your event. This could be due to ' .
+                'an error on our side. Please try again.';
+            $this->Flash->error($msg);
         }
 
-        $this->set(['event' => $event, 'eventTypes' => $typeList, '_serialize' => 'event']);
+//        $eventTypes = $this->Events->EventTypes->find()->select(['id','name'])->all();
+//        $typeList = [];
+//        $eventTypes->each(function ($type) use (&$typeList) {
+//            $typeList[$type->id] = $type->name;
+//        });
+        $eventTypes = $this->Events->EventTypes->find('list', ['limit' => 200]);
+        $this->set(compact('event', 'eventTypes'));
+    }
+
+    public function addVenue($event_refid = null)
+    {
+        $event_refid = CustomString::sanitize($event_refid);
+        try {
+            $event = $this->Events->get($event_refid);
+            unset($event_refid);
+        } catch (RecordNotFoundException $e) {
+            if (Configure::read('debug')) {
+                throw new $e;
+            }
+            $msg = 'Oops! Looks like you took the wrong turn here... ' .
+                'Please go back home...';
+            throw new NotFoundException($msg);
+        }
+
+        $request = $this->getRequest();
+        if ($request->is(['post', 'put'])) {
+            $data = CustomString::arraySanitizeRecursive(
+                $request->getData('venues')
+            )
+                /**
+                 * Use the map method to decorate the date and add new items
+                 */
+                ->map(function ($value) use($event) {
+                    $value['event_refid'] = $event->refid;
+
+                    /* @var $media \Laminas\Diactoros\UploadedFile */
+                    $media = $value['media'];
+                    $destination = $this->FileManager->getUploadDir(
+                        $event->user_refid, ['media','event-medias']
+                    );
+                    $mediaSaved = $this->FileManager->saveFile(
+                        $media, $destination->path
+                    );
+                    pr($value['media']);
+                    exit;
+
+                    $value['media'] = substr($mediaSaved['file_path'], strlen($destination->path));
+
+                    return $value;
+                })
+
+                /**
+                 * Use the each method to modify the data. This can not be used
+                 * to add new entries
+                 */
+                ->each(function ($value) use($event) {
+                    $dateData = $value['dates'];
+                    $dateEntities = $this->Events->Venues->Dates->newEntities(
+                        $dateData
+                    );
+                    $value['dates'] = $dateEntities;
+
+//                    /* @var $media \Laminas\Diactoros\UploadedFile */
+//                    $media = $value['media'];
+//                    $destination = $this->FileManager->getUploadDir(
+//                        $event->user_refid, ['media','event-medias']
+//                    );
+//                    $mediaSaved = $this->FileManager->saveFile(
+//                        $media, $destination->path
+//                    );
+//                    $value['media'] = substr($mediaSaved['file_path'], strlen($destination->path));
+
+                    return $value;
+                })
+                ->toArray();
+
+            $venues = $this->Events->Venues->newEntities($data);
+            pr($venues);
+            exit;
+            $event->set('venues', $venues);
+            if ($this->Events->save($event)) {
+                $this->Flash->success('Event updated successfully...');
+                return $this->redirect(['action' => 'index']);
+            }
+            $msg = 'Oops! Something went wrong. This could be an error on our own part.';
+            $this->Flash->error($msg);
+        }
+
+        $this->viewBuilder()->setTemplate('add_venue');
+        $this->set(compact('event'));
     }
 
     public function calendar($param)
@@ -176,13 +297,21 @@ class EventsController extends AppController
         $this->set('events', $events);
     }
 
-    public function upcoming() {
+    public function upcoming()
+    {
+        $actor = $this->getActiveUser();
+        $this->loadModel('Events');
+        $events = $this->EventVenues->find('dueEventsWhereUserIsGuest', [
+            'user' => $actor->refid,
+        ])->toArray();
 
+        $this->set(compact('events'));
     }
+
     /**
      * View method
      *
-     * @param string|null $id Event id.
+     * @param string|null $id Events id.
      * @return \Cake\Http\Response|void
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
@@ -252,7 +381,7 @@ class EventsController extends AppController
     /**
      * Edit method
      *
-     * @param string|null $id Event id.
+     * @param string|null $id Events id.
      * @return \Cake\Http\Response|null Redirects on successful edit, renders view otherwise.
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
@@ -276,7 +405,7 @@ class EventsController extends AppController
     /**
      * Delete method
      *
-     * @param string|null $id Event id.
+     * @param string|null $id Events id.
      * @return \Cake\Http\Response|null Redirects to index.
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */

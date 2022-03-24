@@ -52,7 +52,7 @@ $this->element('App/page_header');
                                 ]
                         ], [
                             'data' => [
-                                'actor' => h($user->getUsername()),
+                                'actor' => h($appUser->getUsername()),
                                 'account' => h($follower->getUsername()),
                             ],
                             'data-commit' => "connection",

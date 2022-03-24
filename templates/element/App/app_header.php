@@ -3,65 +3,11 @@
 use App\Utility\RandomString;
 use Cake\Routing\Router;
 
+$controlClasses = $control ?? 'pos-r';
 ?>
-<div id="app-header" class="app-header fixed fixed-top">
+<div id="app-header" class="app-header <?= $controlClasses ?> mgxl72rm mgxpa6lw ms-lg-0 fixed-top">
     <div class="hCp h-100 row gutters-sm">
-        <div class="menu-toggler left col-auto">
-            <?php
-            $vibelyData = json_encode(
-                array(
-                    'clickAction' => 'render',
-                    'handler' => 'Drawer.open',
-                    'src' => Router::url(
-                        '/dynamic-contents/menu/main-menu', true
-                    ),
-                    'output' => '.side-drawer',
-                    'direction' => 'ltr'
-                )
-            );
-
-
-            $drawerConfig = json_encode(
-                array(
-                    'direction' => 'ltr',
-                    'drawerMax' => '95%'
-                )
-            );
-
-            ?>
-            <a href="<?= Router::url(
-                '/dynamic-contents/menu/profile-menu?for=user&user=me', true
-            ) ?>"
-               data-toggle="drawer"
-               data-config='<?= $drawerConfig ?>'
-               aria-controls="#<?= RandomString::generateString(
-                   32,
-                   'mixed',
-                   'alpha'
-               ) ?>"
-               class="item me">
-                    <span class="avatar app-user"
-                         style='background-image: url("<?= $this->Url->image('profile-photos/img_avatar.png') ?>")'></span>
-            </a>
-            <?php /*
-            <a href="javascript:void(0);"
-               data-processor="vibely"
-               vibely-data='<?= $vibelyData ?>'
-               aria-controls="drawer"
-               data-url="<?= Router::url(
-                   '/dynamic-contents/menu/profile-menu?for=user&user=me', true
-               ) ?>"
-               class="item me">
-                <svg style="width:24px;height:24px" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z"></path>
-                </svg>
-            </a>
-            */ ?>
-            <!--<a href="#" class="headerButton" data-bs-toggle="modal" data-bs-target="#sidebarPanel">
-
-            </a>-->
-        </div>
-        <div class="flex-fill universal-search col">
+        <div class="col-6 col-md-auto flex-fill universal-search">
             <?= $this->Form->create(null, ['type' => 'get', 'class' => 'm-0 p-0']); ?>
             <div class="input-icon">
                 <input type="search" class="bg-translucent form-control form-control-sm"
@@ -72,9 +18,12 @@ use Cake\Routing\Router;
             </div>
             <?= $this->Form->end(); ?>
         </div>
-        <div class="app-dashboard col-auto right">
-            <div class="d-flex gutters-xs justify-content-between">
-                <div class="notifications col">
+        <div class="app-dashboard col-auto">
+            <div class="gutters-sm justify-content-between row align-items-center">
+                <nav class="app-header-nav col-auto d-none d-md-flex flex-fill">
+                    <?= $this->element('App/main_nav'); ?>
+                </nav>
+                <div class="col-auto notifications">
                     <div class="dropdown">
                         <a href="javascript:void(0)"
                            vibely-data-url="<?= Router::url('/notifications?data-target=dropdown&max=10&vtype=list', true)
@@ -117,7 +66,7 @@ use Cake\Routing\Router;
                         </div>
                     </div>
                 </div>
-                <div class="message-notification col">
+                <div class="col-auto message-notification">
                     <div class="dropdown">
                         <a href="javascript.void(1)"
                            vibely-data-url="<?= Router::url('/messages?data-target=dropdown&max=10&vtype=list', true) ?>"
@@ -159,6 +108,61 @@ use Cake\Routing\Router;
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="menu-toggler col-auto">
+            <?php
+            $vibelyData = json_encode(
+                array(
+                    'clickAction' => 'render',
+                    'handler' => 'Drawer.open',
+                    'src' => Router::url(
+                        '/dynamic-contents/menu/main-menu', true
+                    ),
+                    'output' => '.side-drawer',
+                    'direction' => 'ltr'
+                )
+            );
+
+
+            $drawerConfig = json_encode(
+                array(
+                    'direction' => 'ltr',
+                    'drawerMax' => '95%'
+                )
+            );
+
+            ?>
+            <a href="<?= Router::url(
+                '/dynamic-contents/menu/profile-menu?for=user&user=me', true
+            ) ?>"
+               data-toggle="drawer"
+               data-config='<?= $drawerConfig ?>'
+               aria-controls="#<?= RandomString::generateString(
+                   32,
+                   'mixed',
+                   'alpha'
+               ) ?>"
+               class="item me">
+                    <span class="avatar app-user"
+                          style='background-image: url("<?= $this->Url->image('profile-photos/img_avatar.png') ?>")'></span>
+            </a>
+            <?php /*
+            <a href="javascript:void(0);"
+               data-processor="vibely"
+               vibely-data='<?= $vibelyData ?>'
+               aria-controls="drawer"
+               data-url="<?= Router::url(
+                   '/dynamic-contents/menu/profile-menu?for=user&user=me', true
+               ) ?>"
+               class="item me">
+                <svg style="width:24px;height:24px" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z"></path>
+                </svg>
+            </a>
+            */ ?>
+            <!--<a href="#" class="headerButton" data-bs-toggle="modal" data-bs-target="#sidebarPanel">
+
+            </a>-->
         </div>
     </div>
 </div>

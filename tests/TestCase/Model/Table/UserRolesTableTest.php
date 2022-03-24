@@ -3,18 +3,18 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Model\Table;
 
-use App\Model\Table\UserRolesTable;
+use App\Model\Table\ProfilesRolesTable;
 use Cake\TestSuite\TestCase;
 
 /**
- * App\Model\Table\UserRolesTable Test Case
+ * App\Model\Table\ProfilesRolesTable Test Case
  */
 class UserRolesTableTest extends TestCase
 {
     /**
      * Test subject
      *
-     * @var \App\Model\Table\UserRolesTable
+     * @var \App\Model\Table\ProfilesRolesTable
      */
     protected $UserRoles;
 
@@ -37,7 +37,7 @@ class UserRolesTableTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        $config = $this->getTableLocator()->exists('UserRoles') ? [] : ['className' => UserRolesTable::class];
+        $config = $this->getTableLocator()->exists('UserRoles') ? [] : ['className' => ProfilesRolesTable::class];
         $this->UserRoles = $this->getTableLocator()->get('UserRoles', $config);
     }
 

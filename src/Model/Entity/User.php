@@ -25,12 +25,10 @@ use Cake\ORM\Locator\TableLocator;
  * @property array|null $posts
  * @property array|null $photos
  * @property array|null $videos
- * @property string|null $gender
- * @property string|null $date_of_birth
  * @property string|null $account_type
  * @property string|null $account_status
  * @property bool|null $activated
- * @property bool|null $is_hall_of_famer
+ * @property bool|null $is_verified
  * @property string|null $time_zone
  * @property \Cake\I18n\FrozenTime|null $created
  * @property \Cake\I18n\FrozenTime|null $modified
@@ -58,12 +56,10 @@ class User extends Entity
         'phones' => true,
         'photos' => true,
         'videos' => true,
-        'gender' => true,
-        'date_of_birth' => true,
         'account_type' => true,
         'account_status' => true,
         'activated' => true,
-        'is_hall_of_famer' => true,
+        'is_verified' => true,
         'time_zone' => true,
         'created' => true,
         'modified' => true
@@ -77,11 +73,6 @@ class User extends Entity
     protected $_hidden = [
         'password',
     ];
-
-    public function getGenderAdjective()
-    {
-        return $this->getGender() === 'male' ? 'his' : 'her';
-    }
 
     protected function _setPassword($password) {
         if (strlen($password) > 0) {
@@ -114,11 +105,13 @@ class User extends Entity
 
     public function getNameAccronym()
     {
-        $firstName = substr($this->getFirstName(), 0, 1);
-        $middleName = substr($this->getOthernames(), 0, 1);
-        $lastName = substr($this->getLastName(), 0, 1);
-
-        $accronym = implode('', array_filter([$firstName, $middleName, $lastName]));
+        $names = array($this->getFirstName(), $this->getLastName());
+        $names = array_filter($names);
+        $accronymsList = [];
+        foreach ($names as $name) {
+            $accronymsList[] = substr($name, 0, 1);
+        }
+        $accronym = implode('', $accronymsList);
 
         return $accronym;
     }
@@ -130,45 +123,6 @@ class User extends Entity
 
     public function getPrimaryPhone() {
         return '';
-    }
-
-    public function getGender() {
-        return $this->gender;
-    }
-
-    /**
-     * User date of birth
-     * @return string|null
-     */
-    public function getDOB()
-    {
-        return $this->date_of_birth;
-    }
-
-    /**
-     * Calculates and returns a user's age based on their birth date
-     *
-     * @return \DateInterval|int|false
-     * @throws \Exception
-     */
-    public function getAge($option = null)
-    {
-        $birthDay = new \DateTime(
-            (string) $this->getDOB()
-        );
-        $today = new \DateTime(
-            (string) date("Y-m-d")
-        );
-        $dateDiff = $today->diff($birthDay);
-
-        if ($option && property_exists($dateDiff, $option)) {
-            return (int) $dateDiff->$option;
-        }
-        return $dateDiff;
-    }
-
-    public function getMaritalStatus() {
-        return null;
     }
 
     public function getAccountType()
@@ -254,6 +208,11 @@ class User extends Entity
     public function isActivated()
     {
         return (bool) $this->activated;
+    }
+
+    public function isVerifiedAccount()
+    {
+        return (bool) $this->is_verified;
     }
 
     public function isAHallOfFamer() {

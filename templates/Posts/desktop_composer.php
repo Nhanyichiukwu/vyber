@@ -118,7 +118,7 @@ use Cake\Routing\Router;
                     <label for="privacy" class="mb-0">
                         <select name="privacy" id="privacy" class="custom-select custom-select-sm">
                             <option value="private">Only me</option>
-                            <option value="public" selected="true">Public</option>
+                            <option value="public" selected>Public</option>
                             <option value="connections">Connections</option>
                             <option value="mutual_connections">Mutual Connection</option>
                         </select>

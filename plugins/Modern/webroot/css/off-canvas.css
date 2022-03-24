@@ -1,0 +1,117 @@
+@media (min-width: 768px) {
+    :root {
+        --appHeaderHeight: 80px;
+        --off-canvas-open: 20%;
+        --off-canvas-mini: 15%;
+        --off-canvas-collapsed: 8%;
+        --docker-width: 5rem;
+        --sidebar-min-width: 33.33333333%;
+        --off-canvas-sidebar-min-width: 27.333333%;
+        --sidebar-max-width: calc(100vmax / 12 * 3);
+    }
+}
+[data-page-layout="off-canvas"] .app-header {
+    height: var(--appHeaderHeight);
+    background: none !important;
+}
+[data-page-layout="off-canvas"] #off-canvas {
+    width: var(--off-canvas-open);
+}
+[data-page-layout="off-canvas"].off-canvas-mini #off-canvas {
+    width: var(--off-canvas-mini);
+}
+[data-page-layout="off-canvas"].off-canvas-collapsed #off-canvas {
+    width: var(--docker-width);
+}
+[data-page-layout="off-canvas"] .col-inner[class*="fixed-"] {
+    width: inherit;
+}
+[data-page-layout="off-canvas"] .app-canvas .right-docker {
+    display: none;
+    /*width: calc(var(--docker-width) - 20px);*/
+    /*border-color: rgb(194 206 235 / 33%) !important;*/
+}
+@media (min-width: 768px) {
+    [data-page-layout="off-canvas"] .app-canvas .right-docker {
+        display: block;
+        width: calc(var(--docker-width) - 20px);
+        border-color: rgb(194 206 235 / 33%) !important;
+    }
+    [data-page-layout="off-canvas"] #off-canvas + .app-canvas .pagelet,
+    .pobaw2t1 {
+        padding-right: calc(var(--docker-width) - 20px);
+    }
+}
+@media (min-width: 992px) {
+    /*[data-page-layout="off-canvas"] #off-canvas + .app-canvas .app-header,*/
+    /*[data-page-layout="off-canvas"] #off-canvas + .app-canvas .app-header > .hCp,*/
+    [data-page-layout="off-canvas"] .app-canvas .pagelet {
+        margin-left: calc(var(--off-canvas-open) - 60px);
+    }
+
+    [data-page-layout="off-canvas"] #off-canvas + .app-canvas .app-header,
+    [data-page-layout="off-canvas"] #off-canvas + .app-canvas .app-header > .hCp,
+    [data-page-layout="off-canvas"] #off-canvas + .app-canvas .pagelet {
+        margin-left: calc(var(--off-canvas-open) - 0px);
+    }
+
+    [data-page-layout="off-canvas"].off-canvas-collapsed #off-canvas + .app-canvas .app-header,
+    [data-page-layout="off-canvas"].off-canvas-collapsed #off-canvas + .app-canvas .app-header > .hCp,
+    [data-page-layout="off-canvas"].off-canvas-collapsed .app-canvas .pagelet {
+        margin-left: calc(var(--docker-width) - 0px) !important;
+    }
+
+    [data-page-layout="off-canvas"].off-canvas-mini #off-canvas + .app-canvas .app-header,
+    [data-page-layout="off-canvas"].off-canvas-mini #off-canvas + .app-canvas .app-header > .hCp,
+    [data-page-layout="off-canvas"].off-canvas-mini .app-canvas .pagelet {
+        margin-left: calc(var(--off-canvas-mini) - 1px) !important;
+    }
+
+    [data-page-layout="off-canvas"] #off-canvas + .app-canvas .pagelet,
+    .pobaw2t1 {
+        padding-right: var(--docker-width);
+    }
+    [data-page-layout="off-canvas"] .app-canvas .right-docker {
+        width: var(--docker-width);
+    }
+    [data-page-layout="off-canvas"].docker-expanded .app-canvas .right-docker {
+        width: calc(var(--docker-width) * 3);
+        box-shadow: -2px 0px 12px -5px rgb(0 0 0 / 54%);
+    }
+}
+[data-page-layout="off-canvas"] .app-header > .hCp {
+    height: inherit;
+}
+
+.user-dashboard_profile-block {
+    background-position: center center;
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+[data-page-layout="off-canvas"] .app-canvas .sidebar-right {
+    min-width: var(--off-canvas-sidebar-min-width) !important;
+}
+[data-page-layout="off-canvas"] .app-canvas .sidebar-right .affixed {
+    width: calc(var(--sidebar-min-width) - 1.3rem);
+    right: calc(var(--docker-width) - 20px);
+    left: auto;
+    top: var(--appHeaderHeight);
+    padding-top: 1rem;
+}
+/*body[cw-page-behaviour="content"] .sidebar-right {*/
+/*    display: none !important;*/
+/*}*/
+body[cw-page-behaviour="greedy"] .sidebar-right {
+    display: none !important;
+}
+@media (min-width: 992px) {
+    [data-page-layout="off-canvas"] .app-canvas .sidebar-right .affixed {
+        width: calc(var(--sidebar-max-width) - 0.25rem);
+        right: var(--docker-width);
+        top: var(--appHeaderHeight);
+    }
+
+    [data-page-layout="off-canvas"] .app-canvas .sidebar-right {
+         max-width: var(--sidebar-max-width) !important;
+    }
+}

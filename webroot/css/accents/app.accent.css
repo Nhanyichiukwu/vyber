@@ -1,0 +1,17 @@
+@charset "UTF-8";
+:root {
+    --theme-gradient: linear-gradient(45deg, transparent 15%, #ffbf00);
+    --theme-webkit-gradient: -webkit-linear-gradient(45deg, transparent 15%, #ffbf00);
+    --app-bg-color: #f5f5dc;
+    --main-foreground-translucent: rgb(255 255 255 / 56%);
+    --main-foreground-light: rgb(255 255 255 / 89%);
+    --theme-color: #ed5610; /* #ffcf00; #EF4F09; #fc7800; #191970; */
+    /* --theme-color: #ffbf00; */
+    /* --theme-color: #ff7100; */
+    --theme-color-deemer: #d95114; /* #ffcf00; #EF4F09; #fc7800; #191970; */
+    /* --theme-color-deemer: #eeb200; */
+    /* --theme-color-deemer: #f16f07; */
+    --theme-color-rgb: 255 207 0;
+    --border-color: rgba(0, 40, 100, 0.12);
+    --account-name: #171818;
+}

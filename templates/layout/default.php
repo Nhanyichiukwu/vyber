@@ -2,7 +2,7 @@
 /**
  * @var Cake\TwigView\View\TwigView $twig
  * @var App\View\AppView $this
- * @var \App\Model\Entity\User $user
+ * @var \App\Model\Entity\User $appUser
  */
 
 use App\Utility\RandomString;
@@ -29,8 +29,8 @@ if ($hasFooter) {
     $controlClasses .= ' has-footer';
 }
 $mobileControl = null;
-$userDevice = $this->get('platform');
-if ($userDevice === 'mobile') {
+$appUserDevice = $this->get('platform');
+if ($appUserDevice === 'mobile') {
     $mobileControl = ' clearfix foa3ulpk d-block w-100 h-100 o-hidden';
 }
 ?>
@@ -39,11 +39,11 @@ if ($userDevice === 'mobile') {
 <head>
     <?= $this->element('LayoutElements/head'); ?>
 </head>
-<body class="<?= $userDevice ?>-layout default n1ft4jmn ofjtagoh<?= $controlClasses ?>"
+<body class="<?= $appUserDevice ?>-layout default n1ft4jmn ofjtagoh<?= $controlClasses ?>"
       data-app-theme="default"
       data-app-user=""
       data-base-uri="<?= $baseUri ?>">
-<?php if ($this->get('user')): ?>
+<?php if (isset($appUser)): ?>
     <?= $this->element('App/app_header') ?>
 <?php endif; ?>
 <x-vibely-app-container
@@ -60,7 +60,7 @@ if ($userDevice === 'mobile') {
         </x-vibely-ads>
     <?php endif; ?>
     <div class="row flex-column flex-md-row flex-wrap gutters-sm :two-columns-on-tablet :three-columbs-on-desktop">
-        <?php if ($userDevice === 'desktop'): ?>
+        <?php if ($appUserDevice === 'desktop'): ?>
 <!--        Show sidebar-->
         <nav id="main-navbar" class="col-2 d-none d-lg-block">
             <div class="card">
@@ -72,14 +72,14 @@ if ($userDevice === 'mobile') {
         <?php endif; ?>
         <main id="pageContent"
               role="main"
-              class="main col-lg-6 col-md-8 foa3ulpk h-100 ofjtagoh ofy-auto otgeu7ew py-4<?= $userDevice === 'mobile' ?
+              class="main col-lg-6 col-md-8 foa3ulpk h-100 ofjtagoh ofy-auto otgeu7ew py-4<?= $appUserDevice === 'mobile' ?
                   ' px-0' : '' ?>">
 
             <div class="<?= $mobileControl ?>">
                 <?php if (true === $this->get('pageHeader')): ?>
                     <?= $this->element('App/page_header'); ?>
                 <?php endif; ?>
-                <?php if (isset($user) && !$user->isActivated()): ?>
+                <?php if (isset($appUser) && !$appUser->isActivated()): ?>
                     <?php $this->element('App/activation_prompt'); ?>
                 <?php endif; ?>
 
@@ -92,7 +92,7 @@ if ($userDevice === 'mobile') {
                 ?>
             </div>
         </main>
-        <?php if ($userDevice !== 'mobile'): ?>
+        <?php if ($appUserDevice !== 'mobile'): ?>
         <div class="col-lg-4 col-md-4 d-md-block d-none py-4">
             <div class="card">
                 <div class="card-body">
@@ -103,9 +103,9 @@ if ($userDevice === 'mobile') {
         <?php endif; ?>
     </div>
 
-    <?php if (isset($user)): ?>
+    <?php if (isset($appUser)): ?>
         <?= $this->element('App/buttons/creator_button') ?>
-        <?php if ($userDevice === 'mobile'): ?>
+        <?php if ($appUserDevice === 'mobile'): ?>
             <?= $this->element('App/nav_bottom') ?>
         <?php endif; ?>
     <?php endif; ?>

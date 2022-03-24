@@ -4,7 +4,7 @@ namespace App\Controller;
 use App\Controller\AppController;
 use App\Model\Entity\Request;
 use App\Model\Entity\User;
-use App\Utility\CustomMessages;
+use App\Utility\ServiceMessages;
 use Cake\Collection\Collection;
 use Cake\Core\Configure;
 use Cake\Event\EventInterface;
@@ -35,6 +35,7 @@ class MyNetworkController extends AppController
         parent::initialize();
 
         $this->loadModel('Requests');
+        $this->loadModel('Connections');
     }
 
     public function beforeRender(EventInterface $event) {
@@ -275,7 +276,7 @@ class MyNetworkController extends AppController
                     throw new $e;
                 }
                 throw new NotFoundException(
-                    CustomMessages::getMissingPageMessage()
+                    ServiceMessages::getMissingPageMessage()
                 );
             }
         } else {

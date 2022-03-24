@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
+use Cake\Database\Expression\QueryExpression;
+use Cake\ORM\Locator\TableLocator;
 use Cake\ORM\Query;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
@@ -11,22 +13,27 @@ use Cake\Validation\Validator;
 /**
  * Events Model
  *
- * @property |\Cake\ORM\Association\BelongsTo $EventTypes
+ * @property \App\Model\Table\EventTypesTable&\Cake\ORM\Association\BelongsTo $EventTypes
+ * @property \App\Model\Table\UsersTable&\Cake\ORM\Association\BelongsTo $Authors
  *
- * @method \App\Model\Entity\Event get($primaryKey, $options = [])
- * @method \App\Model\Entity\Event newEntity($data = null, array $options = [])
+ * @method \App\Model\Entity\Event newEmptyEntity()
+ * @method \App\Model\Entity\Event newEntity(array $data, array $options = [])
  * @method \App\Model\Entity\Event[] newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\Event|bool save(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\Event|bool saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Event get($primaryKey, $options = [])
+ * @method \App\Model\Entity\Event findOrCreate($search, ?callable $callback = null, $options = [])
  * @method \App\Model\Entity\Event patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method \App\Model\Entity\Event[] patchEntities($entities, array $data, array $options = [])
- * @method \App\Model\Entity\Event findOrCreate($search, callable $callback = null, $options = [])
+ * @method \App\Model\Entity\Event[] patchEntities(iterable $entities, array $data, array $options = [])
+ * @method \App\Model\Entity\Event|false save(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Event saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Event[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Event[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Event[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Event[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
  *
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
 class EventsTable extends Table
 {
-
     /**
      * Initialize method
      *
@@ -38,23 +45,21 @@ class EventsTable extends Table
         parent::initialize($config);
 
         $this->setTable('events');
-        $this->setDisplayField('refid');
+        $this->setDisplayField('title');
         $this->setPrimaryKey('refid');
 
         $this->addBehavior('Timestamp');
 
+        $this->belongsTo('Authors', [
+            'foreignKey' => 'user_refid',
+            'className' => 'Users'
+        ]);
+        $this->belongsTo('EventTypes', [
+            'foreignKey' => 'event_type_id',
+        ]);
         $this->hasMany('Venues', [
             'foreignKey' => 'event_refid',
             'className' => 'EventVenues'
-        ])->setProperty('venues');
-
-        $this->hasMany('Guests', [
-            'foreignKey' => 'event_refid',
-            'className' => 'EventGuests'
-        ])->setProperty('guests');
-
-        $this->belongsTo('EventTypes', [
-            'foreignKey' => 'event_type_id'
         ]);
     }
 
@@ -67,20 +72,20 @@ class EventsTable extends Table
     public function validationDefault(Validator $validator): Validator
     {
         $validator
-            ->nonNegativeInteger('id')
-            ->allowEmptyString('id');
+            ->nonNegativeInteger('id', null)
+            ->allowEmptyString('id', null, 'create');
 
         $validator
             ->scalar('refid')
             ->maxLength('refid', 20)
-            ->requirePresence('refid', 'create')
-            ->allowEmptyString('refid', null);
+            ->requirePresence('refid','create')
+            ->notEmptyString('refid', null, 'create');
 
         $validator
             ->scalar('title')
             ->maxLength('title', 255)
             ->requirePresence('title', 'create')
-            ->allowEmptyString('title', null);
+            ->notEmptyString('title');
 
         $validator
             ->scalar('description')
@@ -92,21 +97,21 @@ class EventsTable extends Table
             ->allowEmptyString('privacy');
 
         $validator
-            ->scalar('image')
-            ->maxLength('image', 20)
-            ->allowEmptyString('image');
+            ->scalar('media')
+            ->maxLength('media', 255)
+            ->allowEmptyFile('media');
 
         $validator
             ->scalar('user_refid')
             ->maxLength('user_refid', 20)
             ->requirePresence('user_refid', 'create')
-            ->allowEmptyString('user_refid', null);
+            ->notEmptyString('user_refid');
 
         $validator
-            ->scalar('host_name')
-            ->maxLength('host_name', 255)
-            ->requirePresence('host_name', 'create')
-            ->allowEmptyString('host_name', null);
+            ->scalar('hostname')
+            ->maxLength('hostname', 255)
+            ->requirePresence('hostname', 'create')
+            ->notEmptyString('hostname');
 
         $validator
             ->scalar('status')
@@ -115,42 +120,139 @@ class EventsTable extends Table
         return $validator;
     }
 
-
-    public function findDue(Query $query, array $options = [])
+    /**
+     * Returns a rules checker object that will be used for validating
+     * application integrity.
+     *
+     * @param \Cake\ORM\RulesChecker $rules The rules object to be modified.
+     * @return \Cake\ORM\RulesChecker
+     */
+    public function buildRules(RulesChecker $rules): RulesChecker
     {
-        $timeframe = '+7 days';
-        if (array_key_exists('timeframe', $options) && !empty($options['timeframe'])) {
-            $timeframe = $options['timeframe'];
-        }
-        $query = $query
-            ->where([
-                'Events.user_refid' => $options['actor']
-            ])
-            ->contain(['Venues' => ['Guests']])
-            ->matching('Venues', function ($q) use ($timeframe, $options) {
-                $q = $q->where([
-                        'Venues.start_date >=' => new \DateTime($timeframe)
-                    ])
-                    ->contain([
-                        'Guests' => [
-                            'Inviters' => ['Profiles'],
-                            'Invitees' => ['Profiles']
-                        ],
-                    ])
-                    ->matching('Guests', function ($q) use ($options) {
-                        return $q->where([
-                            'OR' => [
-                                ['Guests.inviter_refid' => $options['actor']],
-                                ['Guests.guest_refid' => $options['actor']]
-                            ]
-                        ]);
-                    });
-                return $q;
-            });
+        $rules->add($rules->existsIn(['event_type_id'], 'EventTypes'), ['errorField' => 'event_type_id']);
 
-        return $query;
+        return $rules;
     }
 
+    public function findAllForUser(Query $query, array $options = [])
+    {
+        $venueAssoc = $this->getAssociation('Venues')->getTarget();
+        $whereUserIsGuest = $venueAssoc->find('whereUserIsGuest', $options)
+            ->select(['event_refid'])
+            ->distinct();
+        $userEvents = $query
+            ->where([
+                'OR' => [
+                    'Events.refid IN' => $whereUserIsGuest,
+                    'Events.user_refid' => $options['user'],
+                ],
+                'Events.status' => 'published',
+            ])
+            ->contain([
+                'Authors' => ['Profiles'],
+                'Venues' => [
+                    'Guests' => ['Users' => ['Profiles']]
+                ]
+            ]);
+
+        return $userEvents;
+    }
+
+
+//    public function findDueEvents(Query $query, array $options = [])
+//    {
+//        $timeframe = $options['timeframe'] ?? '+7 days';
+//        $user = $options['user'];
+//        $authoredEvents = $query
+//            ->where(['Events.user_refid' => $user])
+//            ->contain([
+//                'Venues' => [
+//                    'Guests' => [
+//                        'Inviters' => ['Profiles'],
+////                        'Invitees' => ['Profiles']
+//                    ],
+//                ]
+//            ])
+//            ->matching('Venues', function (Query $q) use ($timeframe, $user) {
+////                $expr = $q->newExpr()->between('Venues.start_date', new \DateTime('now'), new \DateTime($timeframe));
+//                $q = $q->where([
+//                    'Venues.start_date >= ' => new \DateTime($timeframe)
+//                ])
+//                    ->contain([
+//                        'Guests' => [
+//                            'Inviters' => ['Profiles'],
+////                            'Invitees' => ['Profiles']
+//                        ],
+//                    ]);
+////                    ->matching('Guests', function (Query $q) use ($user) {
+////                        return $q->where([
+////                            'OR' => [
+////                                ['Guests.guest_refid' => $user],
+////                            ]
+////                        ]);
+////                    });
+//                return $q;
+//            });
+//
+//        $attendingEvents = $this->Venues->Guests->find('dueEvents', $options);
+////        debug($attendingEvents);
+//        pr($attendingEvents);
+//        exit;
+//
+//        return $query;
+//    }
+
+    public function findDueEvents(Query $query, array $options = null)
+    {
+        $timeframe = $options['timeframe'] ?? '+7 days';
+        $user = $options['user'];
+
+        $whereIsGuest = $this->Venues->find('whereUserIsGuest', ['user' => $user])
+            ->where(function (QueryExpression $exp, Query $q) use ($timeframe) {
+                return $exp->between(
+                    'start_date',
+                    new \DateTime('now') ,
+                    new \DateTime($timeframe)
+                );
+            });
+
+        $userOwnEvents = $query->where(['user_refid' => $user]);
+        $result = $userOwnEvents->unionAll($whereIsGuest);
+
+//        $venuesAssoc  = $this->getAssociation('Venues')->getTarget();
+//        $guestsAssoc = $venuesAssoc->getAssociation('Guests')->getTarget();
+//        $attending = $guestsAssoc->subquery()
+//            ->select(['event_venue_id'])
+//            ->distinct()
+//            ->where(['guest_refid' => $user]);
+//
+//        $matchingVenues = $venuesAssoc->find()
+//            ->select(['event_refid'])
+//            ->distinct()
+//            ->where(['id IN' => $attending])
+//            ->where(function (QueryExpression $exp, Query $q) use ($timeframe) {
+//                return $exp->between('start_date', new \DateTime('now') , new \DateTime($timeframe));
+//            })
+//            ->contain([
+//                'Events',
+//                'Guests' => [
+//                    'Users' => ['Profiles']
+//                ]
+//            ]);
+
+//        $query = $query->where(['refid IN' => $matchingVenues])
+//            ->contain([
+//                'Venues' => [
+//                    'Guests' => [
+//                        'Users' => ['Profiles']
+//                    ]
+//                ]
+//            ]);
+//        pr($query->toArray());
+//        exit;
+
+        return $result;
+    }
     public function findInvites(Query $query, array $options)
     {
         $query = $query->matching('Guests', function ($q) use ($options) {
@@ -194,19 +296,5 @@ class EventsTable extends Table
     public function findByUser(Query $query, array $options)
     {
         return $query->where(['user_refid' => $options['user']]);
-    }
-
-    /**
-     * Returns a rules checker object that will be used for validating
-     * application integrity.
-     *
-     * @param \Cake\ORM\RulesChecker $rules The rules object to be modified.
-     * @return \Cake\ORM\RulesChecker
-     */
-    public function buildRules(RulesChecker $rules): RulesChecker
-    {
-        $rules->add($rules->existsIn(['event_type_id'], 'EventTypes'));
-
-        return $rules;
     }
 }

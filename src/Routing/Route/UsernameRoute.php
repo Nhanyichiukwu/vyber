@@ -18,8 +18,6 @@ class UsernameRoute extends Route
     {
         $match = parent::match($url, $context);
 
-        debug($match);
-        exit;
         return $match;
     }
 }

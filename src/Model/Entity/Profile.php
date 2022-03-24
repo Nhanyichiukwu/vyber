@@ -4,13 +4,19 @@ declare(strict_types=1);
 namespace App\Model\Entity;
 
 use Cake\ORM\Entity;
+use Cake\Utility\Text;
 
 /**
  * Profile Entity
  *
  * @property int $id
  * @property string $user_refid
- * @property string|null $about
+ * @property string|null $gender
+ * @property string|null $date_of_birth
+ * @property string|null $relationship
+ * @property string|null $description
+ * @property string|null $bio
+ * @property bool|null $is_hall_of_famer
  * @property string|null $country_of_origin
  * @property string|null $state_of_origin
  * @property string|null $lga_of_origin
@@ -48,7 +54,12 @@ class Profile extends Entity
      */
     protected $_accessible = [
         'user_refid' => true,
-        'about' => true,
+        'gender' => true,
+        'date_of_birth' => true,
+        'relationship' => true,
+        'description' => true,
+        'bio' => true,
+        'is_hall_of_famer' => true,
         'country_of_origin' => true,
         'state_of_origin' => true,
         'lga_of_origin' => true,
@@ -68,14 +79,57 @@ class Profile extends Entity
         'created' => true,
         'modified' => true,
         'user' => true,
-        'user_genres' => true,
-        'user_industries' => true,
-        'user_roles' => true,
+        'industries' => true,
+        'roles' => true,
+        'genres' => true,
+//        'user_genres' => true,
+//        'user_industries' => true,
+//        'user_roles' => true,
     ];
 
     public function getGender()
     {
         return $this->gender;
+    }
+
+    public function getGenderAdjective()
+    {
+        return $this->getGender() === 'male' ? 'his' : 'her';
+    }
+
+    /**
+     * User date of birth
+     * @return string|null
+     */
+    public function getDOB()
+    {
+        return $this->date_of_birth;
+    }
+
+    /**
+     * Calculates and returns a user's age based on their birth date
+     *
+     * @return \DateInterval|int|false
+     * @throws \Exception
+     */
+    public function getAge($option = null)
+    {
+        $birthDay = new \DateTime(
+            (string) $this->getDOB()
+        );
+        $today = new \DateTime(
+            (string) date("Y-m-d")
+        );
+        $dateDiff = $today->diff($birthDay);
+
+        if ($option && property_exists($dateDiff, $option)) {
+            return (int) $dateDiff->$option;
+        }
+        return $dateDiff;
+    }
+
+    public function getRelationship() {
+        return $this->relationship;
     }
 
     public function getCountryOfOrigin()
@@ -128,13 +182,14 @@ class Profile extends Entity
         return $this->website;
     }
 
-    public function getMaritalStatus() {
-
+    public function getDescription()
+    {
+        return $this->description;
     }
 
     public function getBio()
     {
-        return $this->about ?? '';
+        return $this->bio;
     }
 
     public function getHometown()
@@ -148,14 +203,37 @@ class Profile extends Entity
 //        return $this->stagenaem;
 //    }
 
-    public function getNiche()
+    public function getIndustries()
     {
-        return $this->niche;
+        return (array) $this->get('industries');
     }
 
-    public function getRoles() {
+    public function getIndustriesAsString($glue = '&')
+    {
+        $string = collection($this->getIndustries())->extract('name')->toArray();
+        return Text::toList($string, $glue);
+    }
 
-        return [];
+    public function getRoles()
+    {
+        return (array) $this->get('roles');
+    }
+
+    public function getRolesAsString($glue = '&')
+    {
+        $string = collection($this->getRoles())->extract('name')->toArray();
+        return Text::toList($string, $glue);
+    }
+
+    public function getGenres()
+    {
+        return (array) $this->get('genres');
+    }
+
+    public function getGenresAsString($glue = '&')
+    {
+        $string = collection($this->getGenres())->extract('name')->toArray();
+        return Text::toList($string, $glue);
     }
 
     public function getImageUrl()
@@ -164,8 +242,9 @@ class Profile extends Entity
     }
 
     public function hasProfileImage() {
-        if (empty($this->profile_image_url))
+        if (empty($this->profile_image_url)) {
             return false;
+        }
         return true;
     }
 
@@ -175,8 +254,9 @@ class Profile extends Entity
     }
 
     public function hasHeaderImage() {
-        if (empty($this->header_image_url))
+        if (empty($this->header_image_url)) {
             return false;
+        }
         return true;
     }
 }

@@ -1,8 +1,8 @@
 <?php
 
-/* 
+/*
  * Media Details Template
- * 
+ *
  * Uses Element/Media/media_details.ctp
  */
 use App\Utility\Calculator;
@@ -24,9 +24,9 @@ $tmpFileType = ($tmpFile['filetype'] === 'audio' ? 'song' : $tmpFile['filetype']
             <div class="col-lg-3">
                 <div id="media-preview">
             <?= $this->Html->media([
-                    '/uploads/tmp/'.$activeUser->get('refid') . '/' .$tmpFile['name'], 
+                    '/public-files/tmp/'.$activeUser->get('refid') . '/' .$tmpFile['name'],
                     [
-                        'src' => '/uploads/tmp/'.$activeUser->get('refid') . '/' .substr($tmpFile['name'], 0, (strlen($tmpFile['name']) - 4) ) . '.ogg',
+                        'src' => '/public-files/tmp/'.$activeUser->get('refid') . '/' .substr($tmpFile['name'], 0, (strlen($tmpFile['name']) - 4) ) . '.ogg',
                         'type' => $tmpFile['filetype'] . "/ogg; codecs='theora, vorbis'"
                     ]],
                 [
@@ -46,7 +46,7 @@ $tmpFileType = ($tmpFile['filetype'] === 'audio' ? 'song' : $tmpFile['filetype']
                     __('<span class="mdi mdi-cancel"></span> Abort'),
                     ['action' => 'abort'],
                     [
-                        'escapeTitle' => false, 
+                        'escapeTitle' => false,
                         'title' => 'Abort',
                         'class' => 'btn btn-outline-danger btn-sm rounded',
                         'confirm' => __('Are you sure you want to abort process?')
@@ -257,9 +257,9 @@ $tmpFileType = ($tmpFile['filetype'] === 'audio' ? 'song' : $tmpFile['filetype']
                         <div class="col-lg-6">
                             <div class="form-group">
                                 <label class="form-label" for="release-date">Release Date</label>
-                        <?= $this->Form->control('release_date', 
+                        <?= $this->Form->control('release_date',
                                 [
-                                    'type' => 'date', 
+                                    'type' => 'date',
                                     'label' => false,
                                     'year' => ['class' => 'custom-select col-sm-5 mr-3'],
                                     'month' => ['class' => 'custom-select col-sm-4 mr-3'],
@@ -333,7 +333,7 @@ $tmpFileType = ($tmpFile['filetype'] === 'audio' ? 'song' : $tmpFile['filetype']
                                 <h6>Category ( you can select upto 6 categories )</h6>
                             </div>
                         </div>
-                        
+
                         <input type="hidden" name="categories" value="">
                         <?php if (count($categories)): ?>
                             <?php foreach ($categories as $categoriesGroup): ?>

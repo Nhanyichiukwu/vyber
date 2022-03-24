@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Model\Entity;
 
 use Cake\ORM\Entity;
@@ -19,10 +21,9 @@ use Cake\ORM\Entity;
  * @property string|null $author_location
  * @property string|resource|null $categories
  * @property string $file_path
- * @property string $permalink
  * @property string $file_mime
  * @property string $media_type
- * @property string|null $classification
+ * @property int|null $entertainment_type_id
  * @property string|null $target_audience
  * @property string|null $audience_locations
  * @property string|null $age_restriction
@@ -41,10 +42,12 @@ use Cake\ORM\Entity;
  * @property int|null $number_of_downloads
  * @property \Cake\I18n\FrozenTime $created
  * @property \Cake\I18n\FrozenTime $modified
+ *
+ * @property \App\Model\Entity\EntertainmentType $entertainment_type
+ * @property \App\Model\Entity\Group[] $groups
  */
 class Media extends Entity
 {
-
     /**
      * Fields that can be mass assigned using newEntity() or patchEntity().
      *
@@ -56,7 +59,6 @@ class Media extends Entity
      */
     protected $_accessible = [
         'id' => true,
-        'refid' => true,
         'title' => true,
         'slug' => true,
         'description' => true,
@@ -68,10 +70,9 @@ class Media extends Entity
         'author_location' => true,
         'categories' => true,
         'file_path' => true,
-        'permalink' => true,
         'file_mime' => true,
         'media_type' => true,
-        'classification' => true,
+        'entertainment_type_id' => true,
         'target_audience' => true,
         'audience_locations' => true,
         'age_restriction' => true,
@@ -89,6 +90,8 @@ class Media extends Entity
         'number_of_people_played' => true,
         'number_of_downloads' => true,
         'created' => true,
-        'modified' => true
+        'modified' => true,
+        'entertainment_type' => true,
+        'groups' => true,
     ];
 }

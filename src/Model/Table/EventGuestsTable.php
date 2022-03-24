@@ -11,20 +11,24 @@ use Cake\Validation\Validator;
 /**
  * EventGuests Model
  *
- * @property |\Cake\ORM\Association\BelongsTo $EventVenues
+ * @property \App\Model\Table\EventVenuesTable&\Cake\ORM\Association\BelongsTo $EventVenues
  *
- * @method \App\Model\Entity\EventInvitee get($primaryKey, $options = [])
- * @method \App\Model\Entity\EventInvitee newEntity($data = null, array $options = [])
- * @method \App\Model\Entity\EventInvitee[] newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\EventInvitee|bool save(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\EventInvitee|bool saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\EventInvitee patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method \App\Model\Entity\EventInvitee[] patchEntities($entities, array $data, array $options = [])
- * @method \App\Model\Entity\EventInvitee findOrCreate($search, callable $callback = null, $options = [])
+ * @method \App\Model\Entity\EventGuest newEmptyEntity()
+ * @method \App\Model\Entity\EventGuest newEntity(array $data, array $options = [])
+ * @method \App\Model\Entity\EventGuest[] newEntities(array $data, array $options = [])
+ * @method \App\Model\Entity\EventGuest get($primaryKey, $options = [])
+ * @method \App\Model\Entity\EventGuest findOrCreate($search, ?callable $callback = null, $options = [])
+ * @method \App\Model\Entity\EventGuest patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
+ * @method \App\Model\Entity\EventGuest[] patchEntities(iterable $entities, array $data, array $options = [])
+ * @method \App\Model\Entity\EventGuest|false save(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\EventGuest saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\EventGuest[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
+ * @method \App\Model\Entity\EventGuest[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
+ * @method \App\Model\Entity\EventGuest[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
+ * @method \App\Model\Entity\EventGuest[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
  */
 class EventGuestsTable extends Table
 {
-
     /**
      * Initialize method
      *
@@ -39,15 +43,25 @@ class EventGuestsTable extends Table
         $this->setDisplayField('id');
         $this->setPrimaryKey('id');
 
+        $this->belongsTo('Venues', [
+            'foreignKey' => 'event_venue_id',
+            'joinType' => 'INNER',
+            'className' => 'EventVenues'
+        ]);
+
+        $this->belongsTo('Users', [
+            'foreignKey' => 'guest_refid',
+        ]);
+
         $this->belongsTo('Events', [
             'foreignKey' => 'event_refid',
             'joinType' => 'INNER'
         ]);
 
-        $this->belongsTo('EventVenues', [
-            'foreignKey' => 'event_venue_id',
-            'joinType' => 'INNER'
-        ]);
+//        $this->belongsTo('EventsVenues', [
+//            'foreignKey' => 'event_venue_id',
+//            'joinType' => 'INNER'
+//        ]);
 
         $this->belongsTo('Inviters', [
             'foreignKey' => 'inviter_refid',
@@ -55,16 +69,9 @@ class EventGuestsTable extends Table
             'className' => 'Users'
         ]);
 
-        $this->belongsTo('Invitees', [
-            'foreignKey' => 'guest_refid',
-            'joinType' => 'INNER',
-            'className' => 'Users'
-        ])->setProperty('guest');
-
-//        $this->hasOne('Invitees', [
-//            'foreignKey' => 'refid',
-//            'targetForeignKey' => 'guest_refid',
-//            'joinType' => 'LEFT',
+//        $this->belongsTo('Invitees', [
+//            'foreignKey' => 'guest_refid',
+//            'joinType' => 'INNER',
 //            'className' => 'Users'
 //        ])->setProperty('guest');
     }
@@ -79,19 +86,19 @@ class EventGuestsTable extends Table
     {
         $validator
             ->nonNegativeInteger('id')
-            ->allowEmptyString('id');
+            ->allowEmptyString('id', null, 'create');
 
         $validator
             ->scalar('event_refid')
             ->maxLength('event_refid', 20)
             ->requirePresence('event_refid', 'create')
-            ->allowEmptyString('event_refid', null);
+            ->notEmptyString('event_refid');
 
         $validator
             ->scalar('guest_refid')
             ->maxLength('guest_refid', 20)
             ->requirePresence('guest_refid', 'create')
-            ->allowEmptyString('guest_refid', null);
+            ->notEmptyString('guest_refid');
 
         $validator
             ->scalar('inviter_refid')
@@ -120,8 +127,7 @@ class EventGuestsTable extends Table
 
         $validator
             ->scalar('event_status')
-            ->requirePresence('event_status', 'create')
-            ->allowEmptyString('event_status', null);
+            ->notEmptyString('event_status');
 
         return $validator;
     }
@@ -135,12 +141,37 @@ class EventGuestsTable extends Table
      */
     public function buildRules(RulesChecker $rules): RulesChecker
     {
-        $rules->add($rules->existsIn(['event_venue_id'], 'EventVenues'));
+        $rules->add($rules->existsIn(['event_venue_id'], 'EventVenues'), ['errorField' => 'event_venue_id']);
 
         return $rules;
     }
 
     public function findRecent(Query $query, array $options) {
         return $query->where(['guest_refid' => $options['guest'], 'event_seen' => '0']);
+    }
+
+    public function findDueEvents(Query $query, array $options = [])
+    {
+        $timeframe = $options['timeframe'] ?? '+7 days';
+        $user = $options['user'];
+
+        $query = $query
+            ->matching('Venues', function (Query $q) use ($timeframe) {
+//                return $q->where([
+//                    'Venues.start_date <= ' => new \DateTime($timeframe)
+//                ]);
+                return $q->newExpr()
+                    ->between('Venues.start_date', new \DateTime('now'), new \DateTime($timeframe));
+            })
+            ->contain([
+                'Venues' => [
+                    'Guests'
+                ]
+            ])
+            ->where([
+                'Guests.guest_refid' => $user
+            ]);
+
+        return $query;
     }
 }

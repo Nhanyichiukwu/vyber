@@ -14,10 +14,9 @@ use Cake\ORM\Entity;
  * @property string|null $subject_permalink
  * @property string $message
  * @property bool|null $is_read
+ * @property bool|null $is_seen
  * @property \Cake\I18n\FrozenTime $created
  * @property \Cake\I18n\FrozenTime $modified
- *
- * @property \App\Model\Entity\User $e_user
  */
 class Notification extends Entity
 {
@@ -33,6 +32,7 @@ class Notification extends Entity
      */
     protected $_accessible = [
         'id' => true,
+        'refid' => true,
         'type' => true,
         'user_refid' => true,
         'initiator_refid' => true,
@@ -41,8 +41,8 @@ class Notification extends Entity
         'subject_permalink' => true,
         'message' => true,
         'is_read' => true,
+        'is_seen' => true,
         'created' => true,
-        'modified' => true,
-        'e_user' => true
+        'modified' => true
     ];
 }

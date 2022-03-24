@@ -31,11 +31,14 @@ class Genre extends Entity
      */
     protected $_accessible = [
         'id' => true,
-        'parent_refid' => true,
+        'parent_id' => true,
         'name' => true,
         'slug' => true,
         'description' => true,
+        'parent_genre' => true,
+        'child_genres' => true,
         'industry_id' => true,
+        'profiles' => true,
         'created' => true,
         'modified' => true,
     ];

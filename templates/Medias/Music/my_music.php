@@ -10,7 +10,7 @@ use App\Utility\DateTimeFormatter;
 
 $this->extend('common');
 
-$section = $this->Url->request->getQuery('section');
+$section = $this->getRequest()->getQuery('section');
 if (!$section) $section = 'default';
 $this->set('pageHeaderClass', 'row');
 ?>
@@ -67,38 +67,38 @@ $this->set('pageHeaderClass', 'row');
 <?php if ($this->fetch('sub_content')): ?>
     <?= $this->fetch('sub_content'); ?>
 <?php else: ?>
-    <?php $history = (int) 0 // $this->cell('Counter::count', ['recent_plays', [$activeUser]])->render(); ?>
+    <?php $history = (int) 0 // $this->cell('Counter::count', ['recent_plays', [$user]])->render(); ?>
     <?php if ($history > 0): ?>
     <div class="section :recent-plays">
         <h3 class="font-weight-light fsz-22 section-title">Recent Plays</h3>
         <?php
-        $recentPlays = $this->cell('ContentLoader::recentPlays', [$activeUser]);
+        $recentPlays = $this->cell('ContentLoader::recentPlays', [$user]);
         $recentPlays->render();
         ?>
     </div>
     <?php endif; ?>
 
     <?php $mySongs = (int) $this->cell('ContentLoader::count', [
-        'songs', ['author', $activeUser->get('refid')]])->render(); ?>
+        'songs', ['author', $user->get('refid')]])->render(); ?>
     <?php if ($mySongs > 0): ?>
     <div class="section songs">
     <h3 class="font-weight-light fsz-22 section-title">Latest Songs</h3>
         <?php
-        $songs = $this->cell('ContentLoader::load', ['songs', [$activeUser]]);
+        $songs = $this->cell('ContentLoader::load', ['songs', [$user]]);
         $songs->render();
         ?>
     </div>
     <?php endif; ?>
-    <?php $myVideos = (int) $this->cell('ContentLoader::count', ['videos', ['author', $activeUser->get('refid')]])
+    <?php $myVideos = (int) $this->cell('ContentLoader::count', ['videos', ['author', $user->get('refid')]])
         ->render(); ?>
     <?php if ($myVideos > 0): ?>
     <div class="section videos">
         <h3 class="font-weight-light fsz-22 section-title">Latest Videos</h3>
         <?php
-//        $videos = $this->cell('ContentLoader::load', ['videos', [$activeUser]]);
+//        $videos = $this->cell('ContentLoader::load', ['videos', [$user]]);
 //        echo $videos->render();
         $dataSrc = '/videos?token=' . base64_encode(Security::randomString() . '_'.
-        $activeUser->get('refid') . time());
+        $user->get('refid') . time());
         ?>
         <div class="_Hc0qB9 row" data-load-type="r" data-src="<?= $dataSrc ?>" data-rfc="videos"
              data-su="false"
@@ -123,20 +123,20 @@ $this->set('pageHeaderClass', 'row');
     <div class="row">
         <div class="col-md-6 col-lg-4 my-playlists">
             <?php
-            $playlists = $this->cell('ContentLoader::load', ['playlists', [$activeUser, 'music']]);
+            $playlists = $this->cell('ContentLoader::load', ['playlists', [$user, 'music']]);
             $playlists->render();
             ?>
         </div>
         <div class="col-md-6 col-lg-4 my-albums">
             <?php
-            $albums = $this->cell('ContentLoader::load', ['albums', [$activeUser]]);
+            $albums = $this->cell('ContentLoader::load', ['albums', [$user]]);
             $albums->render();
             ?>
         </div>
         <div class="col-md-6 col-lg-4 my-lyrics">
             <?php
-            $albums = $this->cell('ContentLoader::load', ['lyrics', [$activeUser]]);
-            $albums->render();
+            $albums = $this->cell('ContentLoader::load', ['lyrics', [$user]]);
+               $albums->render();
             ?>
         </div>
     </div>

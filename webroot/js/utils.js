@@ -134,6 +134,24 @@ Window.prototype.getBaseUri = function (level = 1)
     return '/' + baseUri + '/';
 }
 
+String.prototype.deserializeString = function () {
+    if (this === undefined || this.length < 1) {
+        return null;
+    }
+    const deserialized = {};
+    const params = new URLSearchParams(this);
+
+    for (const key of params.keys()) {
+        if (params.getAll(key).length > 1) {
+            deserialized[key] = params.getAll(key);
+        } else {
+            deserialized[key] = params.get(key);
+        }
+    }
+
+    return deserialized;
+}
+
 jQuery.fn.extend({
     isEnabled: function () {
         let isEnabled;
@@ -248,15 +266,15 @@ function FilePreviewer(input)
 
     this.processFiles = function (callback)
     {
-        if (this.input.files.length < 1)
+        if (this.input.files.length < 1) {
             return false;
+        }
 
         let i = 0;
         for (i; i < this.input.files.length; i++) {
             let file = this.input.files[i];
             this.readFile(file, i);
         }
-
         if (typeof callback === 'function') {
             this.files.forEach(function (item, index) {
                 callback(item);
@@ -331,8 +349,9 @@ var HTML = {
             throw new ReferenceError('Missing argument "parentNode"! Parent node is required...');
         if (typeof parentNode === 'string') {
             parentNode = $.find(parentNode);
-            if (parentNode.length  < 1);
-            throw new ReferenceError('Parent node not found...');
+            if (parentNode.length  < 1) {
+                throw new ReferenceError('Parent node not found...');
+            }
         }
 
         var s = $(parentNode).find(selector);
@@ -340,10 +359,12 @@ var HTML = {
         if (childNode) {
             if (typeof childNode === 'string') {
                 childNode = document.createElement(childNode);
-                if (overwrite)
-                    $(s).html(childNode);
-                else
-                    $(s).append(childNode);
+                {
+                    if (overwrite)
+                        $(s).html(childNode);
+                    else
+                        $(s).append(childNode);
+                }
             }
         }
         if (attributes.class)
@@ -363,17 +384,30 @@ Window.prototype.propagateEvent = function (eName, eHandler) {
 };
 
 function doAjax(url, callback, options = {}) {
+    // var settings = {
+    //     url: url,
+    //     type: 'GET',
+    //     cache: true,
+    //     processData: true,
+    //     contentType: true,
+    //     success: function (data, status, xhr) {
+    //         callback(data, status, xhr);
+    //     },
+    //     error: function (data, status, xhr) {
+    //         callback(data, status, xhr);
+    //     }
+    // };
     var settings = {
-        url: url,
-        type: 'GET',
-        cache: true,
-        processData: true,
-        contentType: true,
-        success: function (data, status, xhr) {
-            callback(data, status, xhr);
+        "async": true,
+        "crossDomain": false,
+        "url": url,
+        "method": "GET",
+        "headers": {
+            "content-type": "text/html",
         },
-        error: function (data, status, xhr) {
-            callback(data, status, xhr);
+        "processData": false,
+        "error": function (response, status, xhr) {
+            callback(response, status, xhr);
         }
     };
     if (!$.isEmptyObject(options)) {
@@ -382,7 +416,38 @@ function doAjax(url, callback, options = {}) {
         });
     }
 
-    $.ajax(settings);
+    $.ajax(settings).done(function (response, status, xhr) {
+        callback(response, status, xhr);
+    });
+}
+
+async function doFetch(url, options = {}) {
+    var settings = {
+        "method": "GET",
+        "mode": "same-origin",
+        "async": true,
+        "crossDomain": false,
+        "cache": "no-cache",
+        "credentials": "same-origin",
+        "headers": {
+            "Content-Type": "text/html",
+            "X-Requested-With": 'XMLHttpRequest',
+            "X-Requested-Via": "CrowdWowAsynchronousRequestInterface"
+        },
+        "redirect": 'follow',
+        "referrerPolicy": "same-origin",
+        // "processData": false,
+    };
+    if (!$.isEmptyObject(options)) {
+        Object.keys(options).forEach(function (key) {
+            settings[key] = options[key];
+        });
+    }
+
+    const result = await fetch(url, settings).catch(reason => {
+        console.error(reason);
+    });
+    return result.text();
 }
 
 /**
@@ -554,4 +619,27 @@ function toggleSticky(element, cssClass = null)
 {
     cssClass = cssClass ?? 'fixed';
     $(element).toggleClass(cssClass);
+}
+
+
+
+function generateID(length) {
+    let id = '',
+        alpha = 'a b c d e f g h i j k l m n o p q r s t u v w x y z';
+    alpha += ' ' + alpha.toUpperCase();
+    alpha = alpha.split(' ');
+
+    for (let i = 0; i < length;) {
+        let rand = Math.random() * (i + (alpha.length / 3));
+        rand = Math.round(rand);
+        rand = rand + i;
+        if (rand >= alpha.length) {
+            rand = alpha.length - 1;
+        }
+
+        id += '' + alpha[rand];
+        alpha = alpha.reverse();
+        i++;
+    }
+    return id;
 }

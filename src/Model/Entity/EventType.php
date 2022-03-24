@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Model\Entity;
 
 use Cake\ORM\Entity;
@@ -11,10 +13,12 @@ use Cake\ORM\Entity;
  * @property string $slug
  * @property \Cake\I18n\FrozenTime|null $created
  * @property \Cake\I18n\FrozenTime|null $modified
+ *
+ * @property \App\Model\Entity\Event[] $events
+ * @property \App\Model\Entity\OldEvent[] $old_events
  */
 class EventType extends Entity
 {
-
     /**
      * Fields that can be mass assigned using newEntity() or patchEntity().
      *
@@ -28,6 +32,8 @@ class EventType extends Entity
         'name' => true,
         'slug' => true,
         'created' => true,
-        'modified' => true
+        'modified' => true,
+        'events' => true,
+        'old_events' => true,
     ];
 }

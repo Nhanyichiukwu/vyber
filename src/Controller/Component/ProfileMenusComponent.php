@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Component;
 
-use App\Utility\CustomMessages;
+use App\Utility\ServiceMessages;
 use Cake\Controller\Component;
 use Cake\Controller\ComponentRegistry;
 use Cake\Http\Exception\NotFoundException;
@@ -58,7 +58,7 @@ class ProfileMenusComponent extends Component
             : $username;
 
         if ($username === null) {
-            throw new NotFoundException(CustomMessages::getMissingPageMessage());
+            throw new NotFoundException(ServiceMessages::getMissingPageMessage());
         }
 
         try {

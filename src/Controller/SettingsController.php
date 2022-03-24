@@ -2,6 +2,8 @@
 namespace App\Controller;
 
 use App\Controller\AppController;
+use Cake\Event\EventInterface;
+use Cake\ORM\Locator\TableLocator;
 use Cake\Utility\Text;
 use Cake\Utility\Security;
 use Cake\Utility\Inflector;
@@ -27,26 +29,28 @@ use Cake\Auth\DefaultPasswordHasher;
  *
  *
  * @method \App\Model\Entity\Setting[] paginate($object = null, array $settings = [])
- * @property App\Model\Table\Users[] $Users Description
+ * @property \App\Model\Table\UsersTable $Users;
  */
 class SettingsController extends AppController
 {
 
-    
-    public function initialize() {
+
+    public function initialize(): void
+    {
         parent::initialize();
-        
+
         $this->loadModel('Users');
-        
+        $this->set(['page_layout' => 'no-sidebar','sidebar' => false]);
+
 //        $this->Auth->allow(['help']);
     }
-    
-        
-    public function beforeRender(\Cake\Event\Event $event) {
+
+
+    public function beforeRender(EventInterface $event) {
         parent::beforeRender($event);
 //        $this->viewBuilder()->setLayout('settings');
     }
-    
+
     /**
      * Index method
      *
@@ -55,63 +59,20 @@ class SettingsController extends AppController
     public function index()
     {
         $user = $this->getActiveUser();
-        
+
         $this->set(compact('user'));
         $this->set('page', 'profile');
-        return $this->setAction('profile');
-    }
-    
-    public function display(... $path)
-    {
-        // Prevent illegal dots in the path
-        if (in_array('..', $path, true) || in_array('.', $path, true)) {
-            throw new ForbiddenException();
-        }
-        
-        $page = $path[0];
-        $subpage = null;
-        if (!empty($path[1])) {
-            $subpage = $path[1];
-        }
-        
-        $request = $this->getRequest();
-        $user = $this->getActiveUser();
-        
-        // Define the request handler based on the last path in the url
-        $lastOfPath = Inflector::underscore(end($path));
-        $requestHandler = Inflector::camelize($lastOfPath);
-        if ($this->hasAction($requestHandler)) {
-            $this->{$requestHandler}();
-        }
-        
-        $tpl = null;
-        if (count($path)) {
-            $pathStr = implode('/', $path);
-            $tpl = Inflector::underscore($pathStr);
-        }
-        
-        try {
-            $this->viewBuilder()->setTemplate($tpl);
-        } catch (MissingTemplateException $ex) {
-            if (Configure::read('debug')) {
-                throw new MissingTemplateException($ex);
-            } else {
-                throw new NotFoundException();
-            }
-        }
-        
-        $this->set(compact('user','page','subpage'));
     }
 
 
     public function career(...$path)
     {
         $page = $subpage = null;
-        
+
         if (!empty($path[0])) {
             $page = $path[0];
         }
-        
+
         if (!empty($path[1])) {
             $subpage = $path[1];
         }
@@ -120,21 +81,21 @@ class SettingsController extends AppController
         if (in_array('..', $path, true) || in_array('.', $path, true)) {
             throw new ForbiddenException();
         }
-        
+
         $request = $this->getRequest();
         $user = $this->getActiveUser();
         $industry = 'defineIndustry';
-        
+
         if (! $request->getQuery('change_industry') && ! empty($user->industry)) {
             $industry = $user->industry . 'Industry';
         }
-        
+
         $tpl = Inflector::underscore($industry);
-        
+
         if (count($path)) {
             $tpl = implode('/', $path);
         }
-        
+
         try {
             $this->viewBuilder()->setTemplate($tpl);
         } catch (MissingTemplateException $ex) {
@@ -144,7 +105,7 @@ class SettingsController extends AppController
                 throw new NotFoundException();
             }
         }
-        
+
         $this->set('user', $user);
 //        return $this->setAction($industry);
     }
@@ -153,24 +114,24 @@ class SettingsController extends AppController
     {
         $request = $this->getRequest();
         $user = $this->getActiveUser();
-        
+
         if ($request->is(['post', 'put'])) {
             if (! empty($request->getData('industry'))) {
                 $industry = $request->getData('industry');
                 $user = $this->Users->patchEntity($user, ['industry' => $industry]);
-                
+
                 if ($this->Users->save($user)) {
                     $this->Flash->success('Industry Saved');
                     return $this->redirect(['action' => 'industry']);
                 }
-                
+
                 $this->Flash->error(__('Sorry. Unable to choose industry'));
             }
         }
     }
-    
+
     /**
-     * 
+     *
      * @return void
      */
     public function musicIndustry()
@@ -178,7 +139,7 @@ class SettingsController extends AppController
         // Initializing Variables
         $request = $this->getRequest();
         $user = $this->getActiveUser();
-        
+
         // Initializing Table Locators
         $this->loadModel('MusicMakers');
         $this->loadModel('UserEntities');
@@ -188,7 +149,7 @@ class SettingsController extends AppController
         $this->loadModel('Albums');
         $this->loadModel('MusicalInstruments');
         $this->loadModel('Songs');
-        
+
         // Retrieving data
         $userEntities = (array) $this->UserEntities->find()->all()->toArray();
         $userRoles = (array) $this->Roles->find()->all()->toArray();
@@ -205,27 +166,27 @@ class SettingsController extends AppController
         if (! $musicMakerData) {
             $musicMakerData = $this->MusicMakers->newEntity();
         }
-        
-        
-        if ($request->is('post')) 
+
+
+        if ($request->is('post'))
         {
             // Receiving Data from the post request
             $entity = $request->getData('user_entity');
             $role = $request->getData('role');
             $stagename = $request->getData('stagename');
             $genre = $request->getData('genre');
-            $musicCats = (empty($request->getData('music_categories')) ? '' : 
+            $musicCats = (empty($request->getData('music_categories')) ? '' :
                     implode(',', $request->getData('music_categories')));
             $debut = implode('-', array_values($request->getData('debut')));
             $debutAlbum = $request->getData('debut_album');
             $debutSong = $request->getData('debut_song');
             $manager = $request->getData('manager');
             $skills = $request->getData('skills');
-            $instruments = (empty($request->getData('instruments')) ? '' : 
+            $instruments = (empty($request->getData('instruments')) ? '' :
                     implode(',', $request->getData('instruments')));
             $debut = implode('-', array_values($request->getData('debut')));
             $story = $request->getData('story');
-            
+
             $data = [
                 'user_refid' => $user->refid,
                 'user_entity_refid' => $entity,
@@ -241,7 +202,7 @@ class SettingsController extends AppController
                 'instruments_known' => $instruments,
                 'story' => $story
             ];
-            
+
             $musicMakerData = $this->MusicMakers->patchEntity($musicMakerData, $data);
             if ($this->MusicMakers->save($musicMakerData)) {
                 $this->Flash->success(__('Recored updated successfully'));
@@ -249,15 +210,15 @@ class SettingsController extends AppController
             }
             $this->Flash->error(__('Oops! Something went wrong. Please try again.'));
         }
-        
+
         // $this->viewBuilder()->setTemplate('music_industry');
-        
+
         $this->set(compact('musicMakerData', 'userEntities', 'userRoles', 'musicCategories', 'genres', 'musicalInstruments', 'albums', 'songs'));
     }
 
     public function movieIndustry()
     {
-        
+
     }
 
     public function oldAccount()
@@ -267,7 +228,7 @@ class SettingsController extends AppController
 //        if (!empty($path[0])) {
 //            $page = $path[0];
 //        }
-//        
+//
 //        if (!empty($path[1])) {
 //            $subpage = $path[1];
 //        }
@@ -276,12 +237,12 @@ class SettingsController extends AppController
 //        if (in_array('..', $path, true) || in_array('.', $path, true)) {
 //            throw new ForbiddenException();
 //        }
-       
+
         // $this->detectRequestOrigin();
-        
+
 //        if (!empty($page)) {
 //            $prepareContent = '_' . $page;
-//            
+//
 //            if (method_exists($this, $prepareContent)) {
 //                $this->$prepareContent();
 //            } else {
@@ -291,15 +252,15 @@ class SettingsController extends AppController
 //                throw new NotFoundException();
 //            }
 //        }
-        
+
 //        $this->set(compact('page', 'subpage'));
 //        //$this->viewBuilder()->setTemplatePath('Settings\account');
-//        
+//
 //        // Set a fallback path if there is none requested
 //        if (!count($path)) {
 //            $path[] = 'account';
 //        }
-//        
+//
 //        $template = implode('/', $path);
 //        try {
 //            $this->viewBuilder()->setTemplate($template);
@@ -310,11 +271,11 @@ class SettingsController extends AppController
 //            throw new NotFoundException();
 //        }
     }
-    
+
     public function account()
     {
         $user = $this->getActiveUser();
-        
+
         $this->set(compact('user'));
     }
 
@@ -322,12 +283,12 @@ class SettingsController extends AppController
     protected function _edit()
     {
         $request = $this->getRequest();
-        if ($request->is(['post','put'])) 
+        if ($request->is(['post','put']))
         {
             $section = $request->getParam('section');
             $editSection = 'edit' . ucfirst($this->CustomString->toCamelCase($section));
             $this->loadComponent('AccountUpdater');
-            
+
             if ($this->AccountUpdater->$editSection())
             {
                 $this->Flash->success(__($this->AccountUpdater->getLastMessage()));
@@ -338,53 +299,77 @@ class SettingsController extends AppController
                 $this->Flash->error(__($this->AccountUpdater->getLastMessage()));
             }
         }
-        
+
         //$this->getRequest()->allowMethod(['get','post','patch','put','ajax']);
         $UsersTbl = $this->loadModel('Users');
         //$ContactsTbl = $this->loadModel('Contacts');
         $user = $UsersTbl->get($this->getActiveUser()->refid);
         //$contacts = $ContactsTbl->find('belongingTo', ['user' => $user]);
-        
+
         $this->set(compact('user', 'contacts'));
     }
-    
+
     public function name() {
-        
+
     }
-    
+
+    /**
+     * @param null $subpage
+     * @return \Cake\Http\Response|null|void
+     */
     public function profile($subpage = null)
     {
-//        if ($subpage && ! $this->Users->exists($subpage)) {
-//            throw new NotFoundException();
-//        }
-        
         $request = $this->getRequest();
-//        $section = $request->getQuery('section');
-        
-        $user = $this->getActiveUser();
-            
-        if ($request->is(['post','put'])) 
-        {
-            $this->loadComponent('AccountUpdater');
+        $response = $this->getResponse();
 
-            if ($this->AccountUpdater->updateProfile())
-            {
-                $this->Flash->success(__($this->AccountUpdater->getLastMessage()));
-//                return $this->_doRedirect();
+        $user = $this->getActiveUser([
+            'Emails',
+            'Phones',
+//            'Profiles' => [
+//                'Industries',
+//                'Roles',
+//                'Genres',
+//                'Languages',
+//                'Educations'
+//            ]
+        ]);
+
+
+        if ($request->is(['post','put'])) {
+            try {
+                $accountUpdater = $this->loadComponent('AccountUpdater');
+            } catch (\Throwable $e) {
+                if (Configure::read('debug')) {
+                    throw new $e;
+                }
             }
-            else
-            {
-                $this->Flash->error(__($this->AccountUpdater->getLastMessage()));
+
+            $section = $request->getData('section');
+            if (!empty($section)) {
+                $updateSection = 'update' . Inflector::camelize($section);
+                if (!method_exists($accountUpdater, $updateSection)) {
+                    $this->Flash->error(
+                        __('Oops! Profile update failed. You must have submitted an invalid ' .
+                            'form or the form may have expired. Try refreshing ' .
+                            'the page and try again.')
+                    );
+//                    return null;
+                } elseif ($accountUpdater->$updateSection($request)) {
+                    $this->Flash->success(__($accountUpdater->getLastMessage()));
+                    return $this->redirect(
+                        $request->getRequestTarget()
+                    );
+                } else {
+                    $this->Flash->error($accountUpdater->getLastMessage());
+                }
             }
         }
-        
-        //$this->getRequest()->allowMethod(['get','post','patch','put','ajax']);
-//        $UsersTbl = $this->loadModel('Users');
-        //$ContactsTbl = $this->loadModel('Contacts');
-        $user = $this->Users->getUser($this->getActiveUser()->refid);
-        //$contacts = $ContactsTbl->find('belongingTo', ['user' => $user]);
-        
-        $this->set(compact('user', 'contacts'));
+
+        $userIndustries = $this->User->getUserIndustryInfo($user, 'industries');
+        $userRoles = $this->User->getUserIndustryInfo($user, 'roles');
+        $userGenres = $this->User->getUserIndustryInfo($user, 'genres');
+
+        $this->set(compact('user','userIndustries','userRoles','userGenres'));
     }
 
 //
@@ -406,40 +391,66 @@ class SettingsController extends AppController
 //    }
     public function notification()
     {
-        
+
     }
-    
+
     public function addEmail() {
         $user = $this->getActiveUser();
         $request = $this->getRequest();
         $emailTable = $this->getTableLocator()->get('Emails');
-        $email = $emailTable->newEntity();
+        $email = $emailTable->newEmptyEntity();
         if ($request->is('post')) {
-            
+
         }
     }
-    
-    public function changeEmail($emailID = null) {
-        
+
+
+    /**
+     * @return \Cake\Http\Response|null
+     */
+    public function editEmail() {
+        $id = $this->getRequest()->getQuery('id');
+
+        if (is_null($id)) {
+            throw new \Cake\Http\Exception\BadRequestException(
+                'Oops! You must have followed a broken link. Please go back' .
+                ' to previous page.'
+            );
+        }
+        $user = $this->getActiveUser([
+            'Emails',
+            'Phones',
+        ]);
+
+        if ($user->emails[$id]->is_primary) {
+            $this->Flash->warning(__('Sorry. But you cannot edit ' .
+                'the primary email. First make another one the primary email ' .
+                'before making changes to this one.'));
+            return $this->redirect([
+                'controller' => 'settings',
+                'actions' => 'account',
+            ]);
+        }
+        $this->set(compact('id'));
     }
-    
+
     public function addPhone() {
-        
+
     }
-    
+
     public function changePhone($phoneID = null) {
-        
+
     }
-    
+
     public function username() {
         $user = $this->getActiveUser();
         $request = $this->getRequest();
         $response = $this->getResponse();
         $isAjax = $request->is('ajax');
-        if ($isAjax) {
-            $this->autoRender = false;
-        }
-        
+//        if ($isAjax) {
+//            $this->autoRender = false;
+//        }
+
         if ($request->is('post')) {
             $currentUsername = $user->getUsername();
             $username = $request->getData('username');
@@ -472,13 +483,13 @@ class SettingsController extends AppController
                     $message = 'Username changed';
                 }
             }
-            
+
             if ($isAjax) {
                 $msg = json_encode(array(['status' => $status, 'message' => $message]));
                 $response = $response->withStringBody($msg)->withType('json');
                 return $response;
             }
-            
+
             $this->Flash->$status(__($message));
 //            $this->render();
             if ($status === 'success') {
@@ -486,9 +497,9 @@ class SettingsController extends AppController
             }
         }
     }
-    
+
     private function _validateUsername($username, $match = null) {
-        
+
     }
 
     /**
@@ -498,16 +509,16 @@ class SettingsController extends AppController
     {
         $user = $this->getActiveUser();
         $request = $this->getRequest();
-        
+
         if ($request->is('post'))
         {
             $currentPassword = $request->getData('current_password');
             $newPassword = $request->getData('new_password');
             $rePassword = $request->getData('repeat_password');
-            
+
             if  (
-                    ! Validation::notBlank($currentPassword) || 
-                    ! Validation::notBlank($newPassword) || 
+                    ! Validation::notBlank($currentPassword) ||
+                    ! Validation::notBlank($newPassword) ||
                     ! Validation::notBlank($rePassword)
             ) {
                 $this->Flash->error(__('Please fill the empty field(s).'));
@@ -525,42 +536,42 @@ class SettingsController extends AppController
                         . " characters long, and must contain at least two lowercase "
                         . "letters, two uppercase letters, two numbers, two "
                         . "special characters and no white spaces", Configure::read('User.PASSWORD_MIN_LENGTH'));
-                
+
                 $this->Flash->error(__($msg));
             } else {
                 $user = $this->Users->patchEntity($user, ['password' => $newPassword]);
 
                 if ($this->Users->save($user)) {
                     $this->Flash->success(__('Password updated successfully.'));
-                    
+
                     return $this->redirect(['action' => 'password']);
                 }
-                
+
                 $this->Flash->message(__('Sorry, your password could not be updated. Please try again'));
             }
         }
-        
+
 //        $this->set(compact('user'));
     }
-    
+
     public function privacy()
     {
-        
+
     }
-    
+
     public function location()
     {
         $user = $this->getActiveUser();
         $request = $this->getRequest();
         if ($request->is('post'))
         {
-            
+
         }
-        
+
         $this->set(compact('user'));
     }
-    
-    
+
+
     public function help()
     {
         $this->autoRender = false;
@@ -571,7 +582,7 @@ class SettingsController extends AppController
             'forgot_username' => ['controller' => 'accounts', 'action' => 'username', 'reset'],
             'forgot_email' => ['controller' => 'accounts', 'action' => 'email', 'reset']
         ];
-        
+
         foreach ($challenges as $key => $value)
         {
             if ($challenge === $key) {
@@ -579,14 +590,14 @@ class SettingsController extends AppController
             }
         }
     }
-    
+
     public function blocking()
     {
-        
+
     }
-    
+
     public function apps()
     {
-        
+
     }
 }

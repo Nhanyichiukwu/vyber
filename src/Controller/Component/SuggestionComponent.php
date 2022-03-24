@@ -1,11 +1,21 @@
 <?php
 namespace App\Controller\Component;
 
+use App\Model\Entity\Genre;
+use App\Model\Entity\Industry;
+use App\Model\Entity\Role;
 use App\Model\Entity\User;
+use App\Utility\CustomString;
 use Cake\Controller\Component;
 use Cake\Controller\ComponentRegistry;
 use Cake\Collection\Collection;
+use Cake\Core\Configure;
+use Cake\Http\Exception\BadRequestException;
+use Cake\Http\Exception\NotFoundException;
+use Cake\ORM\Locator\TableLocator;
+use Cake\Utility\Hash;
 use Cake\Utility\Inflector;
+use Cake\Utility\Security;
 use Cake\Utility\Text;
 use Cake\Validation\Validation;
 
@@ -46,50 +56,58 @@ class SuggestionComponent extends Component
 //        $this->Activities = $TableLocator->get('Activities');
     }
 
-    public function handle(array $path = [], array $params = [])
-    {
-        if (count($path) > 1) {
-            $subHandler = Inflector::camelize($path[0]);
-            if (method_exists($this, $subHandler)) {
-                array_shift($path);
-                return $this->$subHandler($path, $params);
-            }
-        }
-
-        $what = $params['what'] ?? 'people';
-        unset($params['what']);
-        $suggestWhat = 'suggest' . Inflector::camelize($what);
-
-        return $this->{$suggestWhat}($params);
-    }
+    /**
+     * @param array $path
+     * @param array $params
+     * @return mixed
+     * @throws \Exception If a target method is not found.
+     */
+//    public function handle(array $params = [], array $path = [])
+//    {
+//        if (count($path) > 0) {
+//            $key = array_keys($path)[0];
+//            $subHandler = Inflector::camelize($path[$key]);
+//
+//            array_shift($path);
+//            return $this->$subHandler($path, $params);
+//        }
+//
+//        $what = $params['what'];
+//        unset($params['what']);
+//        $suggestWhat = 'suggest' . Inflector::camelize($what);
+//
+//        return $this->{$suggestWhat}($params);
+//    }
 
     /**
      * @param $options
      * @return array|void|null
+     * @throws \Exception
      */
-    public function suggestPeople(array $options)
+    public function people(array $options, array $path)
     {
-        $user = $this->getController()->getActiveUser();
+//        $user = $this->getController()->getActiveUser();
 
-        if (!$user) {
-            return null;
+        // Prevent url manipulation when not in debug mode
+        if (!isset($options['cat']) && !Configure::read('debug')) {
+            throw new BadRequestException();
         }
-
-        $type = $options['type'] ?? 'any';
+        $category = lcfirst(
+            Inflector::camelize($options['cat'])
+        );
         $query = $this->Users->find()
             // Make sure the user is not in the list
-            ->where([
-                'Users.refid !=' => $user->refid
-            ])
+//            ->whereNotInList('Users.refid', [$user->refid])
             ->contain([
                 'Profiles' => [
-                    'UserRoles' => ['Roles']
+                    'Roles', 'Industries', 'Genres'
                 ],
                 'SentRequests',
                 'ReceivedRequests'
             ]);
 
         array_shift($options);
+        $this->{$category}($options);
 
         switch ($type) {
             case 'people_you_may_know':
@@ -122,13 +140,14 @@ class SuggestionComponent extends Component
      * Fetch a list of people who the user might know.
      *
      * The idea is to find people who the current user might know
-     * Given a list of persons who the user is already connected to,
+     * using a list of persons who the user is already connected to,
      * we try to compare between their own connections to see if we can
      * find anyone the user might know
      * Example: Using user Mike and friends
      * Mike: friends[John, Joe, Jane, Toby, Ella];
      * John: friends[Peter, James, Joahn, Joe, Mike]
      * Joe: friends[Toby, Ella, Mike, John]
+     * In the above example Mike is the principal person.
      * Given that John and Joe, Joe and Toby, Joe and Ella, all have
      * people in common, then there is a great chance
      * that Mike might know some of John's and Joe's
@@ -140,20 +159,28 @@ class SuggestionComponent extends Component
      * @param User $user The user to make suggestions for
      * @return array A list of matched users
      */
-    public function suggestPossibleAcquaintances(User $user): array
+    public function suggestPossibleAcquaintances(User $user, User $account = null): array
     {
-        $userConnections = $this->User->connections(
-            $user->get('refid')
-        )
+        $userConnections = $this->User->connections($user->refid)
             ->toArray();
+
+        if (!is_null($account)) {
+            $userConnections = $this->User
+                ->connections($account->refid)
+                ->toArray();
+        }
 
         if (!count($userConnections)) {
             return [];
         }
-        $connectionsOfConnections = $this->User->connectionsOfConnections(
-            $user->get('refid')
-        )
+        $connectionsOfConnections = $this->User
+            ->connectionsOfConnections($user->refid)
             ->toArray();
+        if (!is_null($account)) {
+            $connectionsOfConnections = $this->User
+                ->connectionsOfConnections($account->refid)
+                ->toArray();
+        }
 
         $possibleAcquaintances = $connectionsOfConnections;
 
@@ -251,8 +278,7 @@ class SuggestionComponent extends Component
                 // Then what if the two are not actually connected, but they still
                 // have other mutual connections apart from Mike?
                 // So we should try to find who they have in common apart from Mike
-                else
-                {
+                else {
                     $mutualConnections = $this->User->getMutualConnections(
                         $previousConnection,
                         $currentConnection, ['apartFrom' => $user]
@@ -312,8 +338,7 @@ class SuggestionComponent extends Component
             $currentIndex += 1;
         } while ($ArrayIterator->valid());
 
-        if (count($possibleAcquaintances))
-        {
+        if (count($possibleAcquaintances)) {
             // Now that we have some possible acquaintances, it is time to mine
             // the data returned, filter off duplicate rows and people who Mike
             // may already have been connected to or have blocked
@@ -464,5 +489,129 @@ class SuggestionComponent extends Component
             return $phrases[$type];
         }
         return $phrases;
+    }
+
+    public function suggestIndustries(array $queryParams)
+    {
+        $Industries = (new TableLocator())->get('Industries');
+        $keyword = CustomString::sanitize($queryParams['keyword']);
+
+        $result = $Industries->find('all')
+            ->where([
+            'OR' => [
+                'Industries.name LIKE' => '%' . $keyword,
+                'Industries.name LIKE' => $keyword . '%',
+                'Industries.name LIKE' => '%' . $keyword . '%',
+            ]
+        ])
+            ->map(function (Industry $industry) {
+                return $industry->name;
+            })->toArray();
+
+        return $result;
+    }
+
+    public function suggestRoles(array $queryParams)
+    {
+        $Roles = (new TableLocator())->get('Roles');
+        $keyword = CustomString::sanitize($queryParams['keyword']);
+
+        $result = $Roles->find('all')
+            ->where([
+            'OR' => [
+                'Roles.name LIKE' => '%' . $keyword,
+                'Roles.name LIKE' => $keyword . '%',
+                'Roles.name LIKE' => '%' . $keyword . '%',
+            ]
+        ])
+            ->map(function (Role $role) {
+                return $role->name;
+            })->toArray();
+
+        return $result;
+    }
+
+    public function suggestGenres(array $queryParams)
+    {
+        $Genres = (new TableLocator())->get('Genres');
+        $keyword = CustomString::sanitize($queryParams['keyword']);
+
+        $result = $Genres->find('all')
+            ->where([
+            'OR' => [
+                'Genres.name LIKE' => '%' . $keyword,
+                'Genres.name LIKE' => $keyword . '%',
+                'Genres.name LIKE' => '%' . $keyword . '%',
+            ]
+        ])
+            ->map(function (Genre $genre) {
+                return $genre->name;
+            })->toArray();
+
+        return $result;
+    }
+
+    public function similarAccounts(array $params, array $path)
+    {
+        if (!isset($params['cw_acct'])) {
+            throw new BadRequestException();
+        }
+        $accountID = CustomString::sanitize($params['cw_acct']);
+        $account = $this->Users->getUser($accountID, [
+            'Profiles' => ['Industries','Roles','Genres']
+        ]);
+        if (!$account instanceof User) {
+            throw new NotFoundException();
+        }
+
+        $user = $this->getConfig('user',null);
+
+        $finderOptions = ['target_user' => $account];
+        if ($user instanceof User) {
+            $finderOptions['user'] = $user;
+        }
+        $query = $this->Users->find('usersSimilarTo', $finderOptions);
+//        if ($user instanceof User) {
+//            $query = $query->andWhere(['Users.refid !=' => $user->refid]);
+//        }
+
+        return $query
+            ->contain([
+                'Profiles' => ['Roles','Genres','Industries']
+            ])
+            ->all();
+    }
+
+    public function peopleYouMayKnow(array $options)
+    {
+        try {
+            $accountID = CustomString::sanitize($options['cw_acct']);
+        } catch (\Throwable $exception) {
+            if (Configure::read('debug')) {
+                throw $exception;
+            }
+            throw new NotFoundException();
+        }
+
+        $account = $this->Users->getUser($accountID, [
+            'Profiles',
+            'Connections'
+        ]);
+        if (!$account instanceof User) {
+            if (Configure::read('debug')) {
+                throw new BadRequestException();
+            }
+            throw new NotFoundException();
+        }
+        $user = $this->getConfig('user');
+        if (!$user instanceof User) {
+            return 'You are not logged in. Log in to see people you and ' .
+                $account->getFirstName() . ' know in common.';
+        }
+        return $this->Users->find('possibleAcquaintances', [
+            'user' => $user,
+            'account' => $account
+        ])
+            ->all();
     }
 }

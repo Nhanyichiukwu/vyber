@@ -7,9 +7,9 @@
 use Cake\Routing\Router;
 use Cake\Utility\Text;
 ?>
-<div class="flex-nowrap flex-row foa3ulpk mgriukcz n1ft4jmn ofx-auto pl-3 tvdg2pcc">
+<div class="flex-nowrap flex-row foa3ulpk gutters-xs mx-n3 n1ft4jmn ofx-auto ps-3">
     <?php foreach ($users as $account): ?>
-    <div class="col-5 col-md-2 col-sm-3">
+    <div class="col-5 col-md-2 col-sm-3 ps-0 pe-md-2">
         <div class="card nYJsFM nYJsFM-md nYJsFM-lg xoj5za5y _oFb7Hd mb-0">
             <div class="card-header yhbirx ebhwdzhs bg-yellow" style="background-image: url
             (demo/photos/eberhard-grossgasteiger-311213-500.jpg);"></div>
@@ -48,7 +48,7 @@ use Cake\Utility\Text;
                             <div class="col"><?= $this->element('App/buttons/connection_reject_btn', ['account' =>
                                     $account]);
                             ?></div>
-                        <?php else: ?>
+                        <?php elseif(isset($user)): ?>
                             <?= $this->element('App/buttons/connection_invite_btn', ['account' => $account]); ?>
                         <?php endif; ?>
                     </div>

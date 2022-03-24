@@ -2,7 +2,7 @@
 namespace App\Controller;
 
 use App\Controller\AppController;
-use App\Utility\CustomMessages;
+use App\Utility\ServiceMessages;
 use Cake\Controller\Exception\MissingActionException;
 use Cake\Core\Configure;
 use Cake\Http\Exception\ForbiddenException;
@@ -21,59 +21,12 @@ class PeopleController extends AppController
     public function initialize(): void
     {
         parent::initialize();
-        $this->viewBuilder()->setTemplatePath('Users');
     }
 
-    /**
-     * Get a list of people based on the value specified in category.
-     * If category is set to null or not provided, it will default to
-     * all, which will invoke the Discover::allPeople()
-     * @param string|null $category
-     * @throws \Exception
-     * @throws MissingActionException
-     * @throws NotFoundException
-     */
-    public function display(...$path)
+    public function index()
     {
-        if (in_array('..', $path, true) || in_array('.', $path, true)) {
-            throw new ForbiddenException();
-        }
-        $page = $subpage = null;
 
-        if (!empty($path[0])) {
-            $page = $path[0];
-        }
-        if (!empty($path[1])) {
-            $subpage = $path[1];
-        }
-
-        $this->set(compact('page', 'subpage'));
-
-//        array_unshift($path, 'people');
-//        $tplPath = array_map(function ($item) {
-//            return str_replace('-','_', $item);
-//        }, $path);
-
-        $templatePath = implode('/', $path);
-        $templatePath = str_replace('-','_', $templatePath);
-
-        try {
-            $this->viewBuilder()->setTemplate($templatePath);
-        } catch (MissingTemplateException $exception) {
-            if (Configure::read('debug')) {
-                throw $exception;
-            }
-            throw new NotFoundException(
-                CustomMessages::getMissingPageMessage()
-            );
-        }
-
-        if (method_exists($this, $page)) {
-            $this->{$page}($subpage, $path);
-        }
     }
-
-
 
     /**
      * View method

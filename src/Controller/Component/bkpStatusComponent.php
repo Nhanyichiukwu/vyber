@@ -19,32 +19,32 @@ class StatusComponent extends Component
      * @var array
      */
     protected $_defaultConfig = [];
-    
+
     protected $_postHasAttachments = false;
-    
+
     protected $_postAttachments = [];
-    
+
     protected $_totalAttachments = 0;
 
     protected $_postIsSuccessful = false;
-    
+
     protected $_lastSavedPost;
-    
+
     protected $_postError;
 
     protected $_attachmentsAreSuccessful = false;
-    
+
     protected $_attachmentsError;
 
     protected $_attachmentsFailedAtDiskWritePoint = [];
-    
+
     protected $_attachmentsFailedAtDbSavePoint = [];
-    
+
     protected $_attachmentsMovedToDisk = [];
 
 
-        const UPLOAD_DIR = WWW_ROOT . 'uploads/';
-    
+        const UPLOAD_DIR = WWW_ROOT . 'public-files/';
+
     public function post()
     {
         $post = $this->Posts->newEntity();
@@ -53,23 +53,23 @@ class StatusComponent extends Component
         $response = $controller->getResponse();
         $session = $request->getSession();
         $user = $controller->getActiveUser();
-        
+
         $statusText = $request->getData('status_text');
         $uploadedFiles = $request->getUploadedFiles();
-        
-        if (array_key_exists('attachments', $uploadedFiles)) 
+
+        if (array_key_exists('attachments', $uploadedFiles))
         {
             $this->_postAttachments = (array) $uploadedFiles['attachments'];
             $this->_postHasAttachments = true;
             $this->_totalAttachments = count($this->_postAttachments);
         }
 
-        if (empty($statusText) && !$this->_postHasAttachments) 
+        if (empty($statusText) && !$this->_postHasAttachments)
         {
             $this->_postError = 'Please type a status or upload a file...';
             return false;
-        } 
-        else 
+        }
+        else
         {
             // Save attachment fisrt, if any, using the FileManager Component
             if ($this->_postHasAttachments) {
@@ -79,14 +79,14 @@ class StatusComponent extends Component
                 }
             }
 
-            if ( ! $this->_attachmentsError ) 
+            if ( ! $this->_attachmentsError )
             {
-                if ($this->Posts->save($post)) 
+                if ($this->Posts->save($post))
                 {
                     $this->_lastSavedPost = (object) $post;
-                    if ($this->_postHasAttachments) 
+                    if ($this->_postHasAttachments)
                     {
-                        if (!$this->_savePostAttachments()) 
+                        if (!$this->_savePostAttachments())
                         {
                             // Remove the files from both database and webdisk
                             $this->PostAttachments->deleteAll(['refid' => $post->author_refid]);
@@ -115,7 +115,7 @@ class StatusComponent extends Component
                     return true;
                 }
             }
-                
+
             $refid = $this->CustomString->generateRandom(20, ['type' => 'numbers']);
             $hasAttach = $this->_postHasAttachments ? '1' : '0';
             $datetime = date('Y-m-d h:i:s');
@@ -136,18 +136,18 @@ class StatusComponent extends Component
 //            }
 //            else
 //            {
-//                
-//                
+//
+//
 //            }
         }
     }
-    
+
     private function _savePostAttachments ()
     {
         $AttachmentTbl = $this->PostAttachments;
         $post = $this->_lastSavedPost;
 
-        foreach ( $this->_postAttachments as $attachment ) 
+        foreach ( $this->_postAttachments as $attachment )
         {
             $fileFilename = $attachment->getClientFilename();
             $fileMediaType = $attachment->getClientMediaType();
@@ -193,29 +193,29 @@ class StatusComponent extends Component
                 $this->_attachmentsSavedToDb[] = $postAttachment;
             }
         }
-        
-        if ( $this->_totalAttachments === 
+
+        if ( $this->_totalAttachments ===
                 (count($this->_attachmentsSavedToDb) && count($this->_attachmentsMovedToDisk)) )
         {
             return true;
         }
     }
-    
+
     public function getPostError()
     {
         return $this->_postError;
     }
-    
+
     public function getAttachmentError()
     {
         return $this->_attachmentsError;
     }
-    
+
     public function getAttachmentsFailedAtSavepoint()
     {
         return $this->_attachmentsFailedAtDbSavePoint;
     }
-    
+
     public function getAttachmentsFailedAtDiskWrite()
     {
         return $this->_attachmentsFailedAtDiskWritePoint;

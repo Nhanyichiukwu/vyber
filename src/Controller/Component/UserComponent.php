@@ -20,6 +20,7 @@ use Cake\Error\Debugger;
 use Cake\Event\Event;
 use Cake\Network\Exception\NotFoundException;
 use Cake\Network\Exception\ForbiddenException;
+use Cake\Utility\Inflector;
 use Cake\Validation\Validation;
 use Cake\ORM\Locator\TableLocator;
 use mysql_xdevapi\RowResult;
@@ -971,18 +972,28 @@ class UserComponent extends Component
         return $achievements;
     }
 
-    public function getCareerInfo(User $actor)
+    /**
+     * @param User $actor
+     * @param string $aspect
+     * @return array
+     */
+    public function getUserIndustryInfo(User $actor, string $aspect)
     {
-//        $tbl = $this->_tableLocator->get('CareerInfos');
-//        $careerInfo = $tbl->find('all', [
-//                    'conditions' => [
-//                        'user_refid' => $actor->get('refid')
-//                    ]
-//                ])
-//                ->all()
-//                ->toArray();
-//
-//        return $careerInfo;
+        $userIndustryInfo = [];
+        $profileAspect = $actor->profile->$aspect;
+
+        if (!is_null($profileAspect)) {
+            $userIndustryInfo = collection($profileAspect)->map(
+                function ($row) use($aspect) {
+//                    $TableAlias = ucfirst(Inflector::camelize($aspect));
+//                    $industriesTbl = (new TableLocator())->get($TableAlias);
+//                    $industry = $industriesTbl->get($id);
+                    return $row->name;
+                }
+            )->toArray(false);
+        }
+
+        return $userIndustryInfo;
     }
 
     public function getFoundations($userId, $status = 'published')

@@ -26,8 +26,12 @@ class CounterCell extends Cell
         $method = Inflector::camelize($what);
         $contentLoader = new ContentLoaderCell($this->request, $this->response);
         $result = call_user_func_array([$contentLoader, $method], $args);
+        $count = null;
+        if (!is_null($result)) {
+            $count = $result->count();
+        }
 
-        $this->set('count', $result->count());
+        $this->set('count', $count);
     }
 
 

@@ -4,6 +4,7 @@ namespace App\Controller;
 use App\Controller\AppController;
 use App\Controller\Component\WebSocketChatHandlerComponent;
 use App\Utility\RandomString;
+use Cake\Event\EventInterface;
 use Cake\Utility\Text;
 use Cake\Utility\Inflector;
 use Cake\Collection\Collection;
@@ -26,14 +27,15 @@ use Cake\Database\Expression;
 class MessagesController extends AppController
 {
 
-    public function initialize() {
+    public function initialize(): void
+    {
         parent::initialize();
 
         $this->loadComponent('Messenger', [
             'user' => $this->getActiveUser()
         ]);
-        $this->loadComponent('Cookie');
-        $this->loadComponent('WebSocketChatHandler');
+//        $this->loadComponent('Cookie');
+//        $this->loadComponent('WebSocketChatHandler');
 
         $this->loadModel('App');
         $this->loadModel('Chats');
@@ -42,13 +44,12 @@ class MessagesController extends AppController
         $this->loadModel('Connections');
         $this->loadModel('Users');
 
-        $this->viewBuilder()->setLayout('messenger');
+        $this->viewBuilder()->setLayout('Messenger.messenger');
     }
 
-    public function beforeRender(\Cake\Event\Event $event) {
+    public function beforeRender(EventInterface $event) {
         parent::beforeRender($event);
-
-
+        $this->collapseOffCanvas(true);
     }
 
 
@@ -164,7 +165,7 @@ class MessagesController extends AppController
      * @param string $chatID ID of a group chat or username of the corresponding<br>user
      * @return Cake\Http\Response
      */
-    public function t($chatID = null)
+    public function t($threadID = null)
     {
         $request = $this->getRequest();
         $response = $this->getResponse();
@@ -178,7 +179,7 @@ class MessagesController extends AppController
         // we attempt to redirect them to a most recently active chat, if any,
         // otherwise they are sent back to the index
 
-        if (is_null($chatID)) {
+        if (is_null($threadID)) {
             if (null !== $this->_lastActiveConversation()) {
                 return $this->redirect([
                             'action' => 't',
@@ -192,7 +193,7 @@ class MessagesController extends AppController
             return $this->redirect(['action' => 'index']);
         }
 
-        $chat = $this->_getChat($chatID);
+        $chat = $this->_getChat($threadID);
 
         if (null === $chat) {
             if ($request->is('post')) {
@@ -202,7 +203,7 @@ class MessagesController extends AppController
                     $chatType = $request->getData('chat_type');
                 }
                 $chatEndPoint = '_start' . ucfirst($chatType) . 'Chat';
-                $chat = $this->{$chatEndPoint}($chatID);
+                $chat = $this->{$chatEndPoint}($threadID);
             } else {
                 // Kick the user back to the messenger home
                 return $this->redirect(['action' => 'index']);
@@ -222,7 +223,7 @@ class MessagesController extends AppController
             return $this->redirect(['action' => 'index']);
         }
 
-        $this->set(compact('chatID','chatTitle','chat'));
+        $this->set(compact('threadID','chatTitle','chat'));
     }
 
     /**

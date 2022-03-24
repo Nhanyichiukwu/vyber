@@ -3,6 +3,7 @@ namespace App\Controller;
 
 use App\Controller\AppController;
 use App\Model\Entity\Post;
+use App\Model\Entity\User;
 use App\Utility\CustomString;
 use App\Utility\DateTimeFormatter;
 use App\Utility\FileManager;
@@ -14,6 +15,8 @@ use Cake\Datasource\ResultSetInterface;
 use Cake\Event\Event;
 use Cake\Event\EventInterface;
 use Cake\Http\Cookie\Cookie;
+use Cake\Http\Exception\BadRequestException;
+use Cake\Http\Exception\ForbiddenException;
 use Cake\Http\Exception\NotFoundException;
 use Cake\Log\Log;
 use Cake\Routing\Router;
@@ -27,7 +30,7 @@ use Exception;
  * @property \App\Model\Table\PostsTable $Posts
  * @property \App\Model\Table\UsersTable $Users
  * @property \App\Model\Table\PhotosTable $Photos
- * @property \App\Model\Table\MediasTable $Medias
+ * @property \App\Model\Table\Medias2Table $Medias
  * @property \App\Model\Table\PostAttachmentsTable $PostAttachments
  *
  * @method \App\Model\Entity\Post[]|ResultSetInterface paginate($object = null, array $settings = [])
@@ -122,7 +125,7 @@ class PostsController extends AppController
      *
      * @var string
      */
-    protected $_privacy;
+    protected $_privacy = 'public';
 
     /**
      *
@@ -172,7 +175,7 @@ class PostsController extends AppController
     protected $_pendingTransactions = [];
 
 
-    const UPLOAD_DIR = WWW_ROOT . 'media' . DS;
+    const UPLOAD_DIR = WWW_ROOT . 'public-files' . DS;
 
     public function initialize(): void
     {
@@ -233,14 +236,14 @@ class PostsController extends AppController
     }
 
     /**
-     * @return \Cake\Http\Response
+     * @return \Cake\Http\Response|null
      */
     public function create()
     {
         $request = $this->getRequest();
         $response = $this->getResponse();
-        $composer = $request->getQuery('composer') ?? 'composer';
-        $this->viewBuilder()->setTemplate($composer);
+//        $composer = $request->getQuery('composer') ?? 'composer';
+//        $this->viewBuilder()->setTemplate($composer);
         $draft = $this->getLastSavedDraft();
 
         if ($draft) {
@@ -252,13 +255,14 @@ class PostsController extends AppController
         $post = $this->_post;
         $status = 'success';
         $message = 'Saved';
-        $isAjax = (
-            $request->is('ajax') ||
-            $request->getQuery('utm_req_w') === 'if'
-        );
+        $isAjax = $request->is('ajax');
+        $isIFrame = array_key_exists('frame', $request->getQueryParams());
 
         if ($isAjax) {
             $this->viewBuilder()->setLayout('ajax');
+        }
+        if ($isIFrame) {
+            $this->viewBuilder()->setLayout('iframe');
         }
 
         if ($request->is(['post','put'])) {
@@ -266,64 +270,92 @@ class PostsController extends AppController
             try {
                 $this->preparePost();
             } catch (Exception $e) {
+                $status = 'error';
+                $message = __("Sorry, something went wrong while trying "
+                    . "to post your {0}. Please try "
+                    . "refreshing the page and try again.", $this->_post->type);
+                return $response->withStatus(500, sprintf(
+                    'Unable to post %s', $this->_post->type
+                ))
+                    ->withStringBody($message);
             }
 
             try {
-                if (!$this->savePost()) {
-                    // This section could be moved to an event handler function
-                    // {
-                    $logMessage = __("Status update by user {userid} ({fullname}) failed. Reason: {reason}", [
-                        'userid' => $this->_author->refid,
-                        'fullname' => $this->_author->fullname,
-                        'reason' => serialize($this->_post->getErrors())
-                    ]);
-                    Log::write('error', $logMessage);
-                    // }
-
-                    $status = 'error';
-                    $message = __("Sorry, something went wrong while trying "
-                        . "to post your {0}. Please try "
-                        . "refreshing the page and try again.", $this->_post->type);
-                    return $response->withStatus(500, 'Unable to publish post');
-                }
+                $postSaved = $this->savePost();
             } catch (Exception $e) {
+                // This section could be moved to an event handler function
+                // {
+                $logMessage = __("Status update by user {userid} ({fullname}) failed. Reason: {reason}", [
+                    'userid' => $this->_author->refid,
+                    'fullname' => $this->_author->fullname,
+                    'reason' => serialize($this->_post->getErrors())
+                ]);
+                Log::write(E_ERROR, $logMessage);
+                // }
+
+                $status = 'error';
+                $message = __("Sorry, something went wrong while trying "
+                    . "to post your {0}. Please try "
+                    . "refreshing the page and try again.", $this->_post->type);
+                $message .= '(' . $e->getTraceAsString() . ')';
+                return $response->withStatus(500,
+                    'Unable to post ' . $this->_post->type
+                )->withStringBody($message);
             }
-            $post = $this->Posts->get($this->_post->refid);
-            $this->viewBuilder()->setTemplate('new_post');
+            if (!$postSaved) {
+                $message = 'Owch! Looks like your post failed. Please try again.';
+                $response = $response->withStringBody($message);
+            } else {
+                $post = $this->Posts->get($this->_post->refid);
+//                $this->viewBuilder()->setTemplate('new_post');
 
-            // An event to make other parts of the application
-            // aware of the new post, and as well inform those
-            // who matter, that this user has created a new post.
-            $event =  new Event('Model.Post.newPost', $this, ['post' => $post]);
-            $this->getEventManager()->dispatch($event);
+                // An event to make other parts of the application
+                // aware of the new post, and as well inform those
+                // who matter, that this user has created a new post.
+                $event =  new Event('Model.Post.newPost', $this, ['post' => $post]);
+                $this->getEventManager()->dispatch($event);
+                $response = $response->withStringBody(json_encode(
+                    [
+                        'message' => ucfirst($this->_postType) . ' posted successfully.',
+                        'post_link' => Router::url('/' . $this->_author->getUsername() . '/posts/' . $post->refid),
+                    ]
+                ));
+            }
+            return $response;
         }
-
         $this->set(['post' => $post, '_serialize' => 'post']);
     }
 
 
     /**
-     * Prepares post from
-     *
-     * @return $this\void\null
+     * @return $this
      */
-    protected function preparePost()
+    private function preparePost()
     {
         $request = $this->getRequest();
-        if (!$request->getData()) {
-            return null;
+        if (null === $request->getData()) {
+            throw new BadRequestException('Invalid Request: No data sumitted.');
         }
+
         $post = (
-            null !== $this->_post ? $this->_post : $this->Posts->newEmptyEntity()
+            null !== $this->_post
+                ? $this->_post
+                : $this->Posts->newEmptyEntity()
         );
 
         /** Building post **/
-
         $this->_author = $this->getActiveUser();
-        if ($request->getData('uid')) {
+        $postAuthorID = $request->getData('uid', false);
+        if ($postAuthorID && $this->Users->exists([
+            'refid' => CustomString::sanitize($postAuthorID)
+            ])
+        ) {
             $this->_author = $this->Users->getUser(
-                    CustomString::sanitize($request->getData('uid'))
+                CustomString::sanitize($postAuthorID)
             );
+        }
+        if (!$this->_author instanceof User) {
+            throw new ForbiddenException('Forbidden Request! You are not authorised to make this request.');
         }
 
         if ($request->getData('post_text')) {
@@ -342,15 +374,19 @@ class PostsController extends AppController
             );
         }
         if ($request->getData('has_attachment')) {
-            $this->_hasAttachment = true;
-            $this->_attachmentAttributes =
-                (array) $request->getData('attachments_attributes');
-        }
-        if ($request->getData('attachment_type')) {
-            $this->_attachmentType = CustomString::sanitize(
+            $this->_hasAttachment = (bool) $request->getData('has_attachment');
+
+            if ($this->_hasAttachment) {
+                $this->_attachmentAttributes =
+                    (array) $request->getData('attachments_attributes');
+            }
+            if ($request->getData('attachment_type')) {
+                $this->_attachmentType = CustomString::sanitize(
                     $request->getData('attachment_type')
-            );
+                );
+            }
         }
+
         if ($request->getData('original_post')) {
             $this->_originalPost = CustomString::sanitize(
                     $request->getData('original_post')
@@ -372,7 +408,7 @@ class PostsController extends AppController
             );
         }
 
-// If the user sharing his/her location with the post..
+// If the user is sharing his/her location with the post..
         if ($request->getData('location')) {
             $this->_authorLocation = (string) CustomString::sanitize(
                 $request->getData('location')
@@ -397,17 +433,11 @@ class PostsController extends AppController
             $this->_isScheduled = true;
         }
 
-        if ($this->_status === 'published') {
-            $timezone = $this->GuestsManager->getGuest()->get('timezone');
-            $datetime = DateTimeFormatter::getCurrentDateTime($timezone);
-            $this->_datetime = $datetime;
-        }
-
+        $timezone = $this->GuestsManager->getGuest()->get('timezone');
+        $datetime = DateTimeFormatter::getCurrentDateTime($timezone);
+        $this->_datetime = $datetime;
         $refid = RandomString::generateUniqueID(function($id) {
-            if ($this->Posts->exists(['refid' => $id])) {
-                return true;
-            }
-            return false;
+            return $this->Posts->exists(['refid' => $id]);
         }, 20, 'numbers');
 
         $data = [
@@ -425,12 +455,15 @@ class PostsController extends AppController
             'location' => $this->_authorLocation,
             'privacy' => $this->_privacy,
             'status' => $this->_status,
-//            'year_published' => $this->_year,
-            'date_published' => $this->_datetime,
-            'scheduled_time' => $this->_scheduledTime,
+//            'date_published' => $this->_datetime,
+//            'scheduled_time' => $this->_scheduledTime,
             'created' => $this->_datetime,
             'modified' => $this->_datetime,
         ];
+
+        if ($this->_status === 'published') {
+            $data['date_published'] = $this->_datetime;
+        }
 
         $post = $this->Posts->patchEntity($post, $data);
         $this->_post = $post;
@@ -443,11 +476,14 @@ class PostsController extends AppController
     }
 
     /**
+     * Save a post along with its attachments if any.
+     * This method uses SQL transaction to confirm that all data are able to
+     * be saved before committing the transactions. If there is a problem at any
+     * point of the process, then the entire process must be terminated.
      *
-     * @param \App\Model\Entity\Post $post
-     * @param boolean $returnTransaction
-     * @return \Cake\Database\Connection|boolean
+     * @param Post|null $post
      * @throws Exception
+     * @return bool|mixed
      */
     protected function savePost(Post $post = null)
     {
@@ -459,36 +495,42 @@ class PostsController extends AppController
             return false;
         }
 
-        return $this->Posts->getConnection()->transactional(
-                        function (Connection $connection) use ($post) {
-                    if (!$this->Posts->save($post, ['atomic' => false])) {
+        $result = $this->Posts->getConnection()->transactional(
+            function (Connection $connection) use ($post) {
+                if (!$this->Posts->save($post, ['atomic' => false])) {
+                    $connection->rollback();
+                    return false;
+                }
+
+                // Check if the post has attachments and save it all at once
+                if ($this->_hasAttachment) {
+                    if (false === $this->saveAttachments()) {
                         $connection->rollback();
                         return false;
                     }
+                }
 
-                    // Check if the post has attachments and save it all at once
-                    if ($this->_hasAttachment) {
-                        if (false === $this->saveAttachments()) {
-                            $connection->rollback();
-                            return false;
-                        }
+                //  If the post is to be scheduled
+                if ($this->_isScheduled) {
+                    if (!$this->_schedule($post)) { // Should trigger some kind of cron job
+                        $this->_response['post_scheduling'] = 'Unable to schedule post';
                     }
+                }
 
-                    //  If the post is to be scheduled
-                    if ($this->_isScheduled && $this->hasAction('_schedule')) {
-                        if (!$this->_schedule($post)) { // Should trigger some kind of cron job
-                            $this->_response['post_scheduling'] = 'Unable to schedule post';
-                        }
-                    }
+                // Removing any draft saved during the post composition
+                $this->deleteDraft();
+                if (false === $connection->commit()) {
+                    return false;
+                }
 
-                    // Removing any draft saved during the post composition
-                    $this->deleteDraft();
-                    $connection->commit();
-                    foreach ($this->_pendingTransactions as $tranx) {
-                        $tranx->commit();
-                    }
-                    return true;
-                });
+                foreach ($this->_pendingTransactions as $tranx) {
+                    $tranx->commit();
+                }
+                return true;
+            }
+        );
+
+        return $result;
     }
 
 
@@ -497,7 +539,7 @@ class PostsController extends AppController
         $result = null;
         $saveAttachmentsAsType = 'saveAttachmentsAs' . Inflector::camelize($this->_attachmentType);
 
-        if (!$this->hasAction($saveAttachmentsAsType)) {
+        if (!method_exists($this, $saveAttachmentsAsType)) {
             $this->_response['attachment_error'] = __('Unknown attachment processor');
             return false;
         }
@@ -508,18 +550,23 @@ class PostsController extends AppController
         }
 
         $attachmentEntities = $this->PostAttachments->newEntities($result);
-        return $this->PostAttachments->getConnection()
-            ->transactional(
-                function ($connection) use ($attachmentEntities) {
-                if (!$this->PostAttachments->saveMany(
-                    $attachmentEntities, ['atomic' => false]
-                )) {
-                    $connection->rollback();
-                    return false;
-                }
-                $this->_pendingTransactions[] = $connection;
-                return true;
-            });
+        try {
+            return $this->PostAttachments->getConnection()
+                ->transactional(
+                    function (Connection $connection) use ($attachmentEntities) {
+                        if (!$this->PostAttachments->saveMany(
+                            $attachmentEntities, ['atomic' => false]
+                        )) {
+                            $connection->rollback();
+                            return false;
+                        }
+                        $this->_pendingTransactions[] = $connection;
+                        return true;
+                    }
+                );
+        } catch (Exception $e) {
+            return false;
+        }
     }
 
 
@@ -527,7 +574,10 @@ class PostsController extends AppController
     {
         $uploadedFiles = (array) $this->_uploadedFiles;
 
-        if (!array_key_exists('attachments', $uploadedFiles) || empty($uploadedFiles['attachments'])) {
+        if (
+            !array_key_exists('attachments', $uploadedFiles) ||
+            empty($uploadedFiles['attachments'])
+        ) {
             throw new Exception('No media found');
         }
 
@@ -535,14 +585,17 @@ class PostsController extends AppController
         $error = 0;
         // The following container will be populated with values returned from
         // FileManager::saveFile();
-        // In case of any failure in a bulk operation, we can undo all all
+        // In case of any failure in a bulk operation, we can undo all
         // previous files saved in this container
         $savedFiles = [];
 
         foreach ($uploadedFiles['attachments'] as $uploadedFile) {
             $destination = self::UPLOAD_DIR . Inflector::pluralize(
-                            FileManager::getFileTypeBasedOnMime($uploadedFile->getClientMediaType())
-            );
+                    FileManager::getFileTypeBasedOnMime(
+                        $uploadedFile->getClientMediaType()
+                    )
+                );
+
             $fileInfo = FileManager::saveFile($uploadedFile, $destination);
             if (false === $fileInfo) {
                 $this->_response['file_server_error'] = __('Internal sever error!');
@@ -552,8 +605,11 @@ class PostsController extends AppController
             $savedFiles[] = $fileInfo;
 
             $saveMediaDetailsInDb = 'save' . Inflector::camelize($fileInfo['filetype']) . 'DetailsInDb';
-            if (!$this->hasAction($saveMediaDetailsInDb) ) {
-                $this->_response['file_processor_error'] = __('No corresponding file processor found for "{0}".', $fileInfo['filetype']);
+            if (!method_exists($this, $saveMediaDetailsInDb)) {
+                $this->_response['file_processor_error'] = sprintf(
+                    'No corresponding file processor found for "%s".',
+                    $fileInfo['filetype']
+                );
                 $error = 1;
                 break;
             }
@@ -564,12 +620,18 @@ class PostsController extends AppController
 
             if (!is_object($media)) {
                 FileManager::deleteFile($fileInfo['file_path']);
-                $this->_response['file_database_error'] = __('Unable to upload {0}', $fileInfo['filetype']);
+                $this->_response['file_database_error'] = sprintf(
+                    'Unable to upload %s', $fileInfo['filetype']
+                );
                 $error = 1;
                 break;
             }
 
-            $permalink = Router::url('/'. $this->_author->getUsername().'/posts/' . $this->_post->get('refid') . '/' . Inflector::pluralize($fileInfo['filetype']) . '/' . $media->refid, true);
+            $permalink = Router::url('/'. $this->_author->getUsername()
+                .'/posts/' . $this->_post->get('refid') . '/'
+                . Inflector::pluralize($fileInfo['filetype']) . '/'
+                . $media->refid, true);
+
             $batchAttachmentsData[] = [
                 'post_refid' => $this->_post->get('refid'),
                 'author_refid' => $this->_author->get('refid'),
@@ -600,6 +662,7 @@ class PostsController extends AppController
      *
      * @param array $photoInfo
      * @param boolean $returnTransaction
+     * @throws Exception
      * @return boolean
      */
     protected function savePhotoDetailsInDb(array $photoInfo)
@@ -609,13 +672,10 @@ class PostsController extends AppController
             $attachmentAttributes = $this->_attachmentAttributes[$photoInfo['original_filename']];
         }
         $refid = RandomString::generateUniqueID(function($id) {
-            if ($this->Photos->exists(['refid' => $id])) {
-                return true;
-            }
-            return false;
+            return $this->Photos->exists(['refid' => $id]);
         }, 20, 'mixed');
 
-        $photo = $this->Photos->newEmptyEntity([
+        $photo = $this->Photos->newEntity([
             'refid' => $refid,
             'author_refid' => $this->_author->refid,
             'file_path' => substr($photoInfo['file_path'], strlen(self::UPLOAD_DIR)),
@@ -632,15 +692,16 @@ class PostsController extends AppController
             return false;
         }
         return $this->Photos->getConnection()->transactional(
-                    function($connection) use($photo) {
+            function (Connection $connection) use ($photo) {
                 if (!$this->Photos->save($photo, ['atomic' => false])) {
-                   $connection->rollback();
-                   return false;
+                    $connection->rollback();
+                    return false;
                 }
 
                 $this->_pendingTransactions[] = $connection;
                 return $photo;
-            });
+            }
+        );
     }
 
     protected function saveVideoDetailsInDb(array $videoDetails, $autoCommit = true) {
@@ -1336,7 +1397,7 @@ class PostsController extends AppController
 //                // An event to make other parts of the application
 //                // aware of the new post, and as well inform those
 //                // who matter, that this user has created a new post.
-//                $event =  new Event("Model.Post.new{$type}", $this, ["$type" => $comment]);
+//                $event =  new Events("Model.Post.new{$type}", $this, ["$type" => $comment]);
 //                $this->getEventManager()->dispatch($event);
 //            } elseif($isAjax) {
 //                $this->setResponse($this->getResponse()->withStatus(500, 'error'));

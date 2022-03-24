@@ -3,14 +3,14 @@
 namespace App\Utility;
 
 use InvalidArgumentException;
-use Cake\Filesystem\Folder;
-use Cake\Filesystem\File;
-use Zend\Diactoros\UploadedFile;
+use Laminas\Diactoros\UploadedFile;
 use Cake\Utility\Inflector;
 use App\Utility\RandomString;
 use Cake\I18n\Time;
 use Cake\I18n\Date;
 use Cake\Utility\Security;
+use App\Utility\Folder;
+use App\Utility\File;
 
 /**
  * FileManager Utility
@@ -24,8 +24,6 @@ class FileManager
      * @var array
      */
     protected $_defaultConfig = [];
-
-    public $components = ['CustomString','UserProfiler'];
 
 
     protected $_filesAreSuccessful = false;
@@ -67,7 +65,7 @@ class FileManager
 
     protected $_fileToMove;
 
-    const UPLOAD_DIR = WWW_ROOT . 'uploads' . DS;
+    const UPLOAD_DIR = WWW_ROOT . 'public-files' . DS;
 
     public function __construct()
     {
@@ -131,10 +129,15 @@ class FileManager
         return ['saved' => $savedFiles, 'failed' => $failedFiles];
     }
 
+    /**
+     * @param $file
+     * @param $destination
+     * @return array|void|null
+     */
     public static function saveFile($file, $destination) {
         $result = null;
         if ($file instanceof UploadedFile) {
-            $result = self::_saveAsDiacotorosUploadedFile($file, $destination);
+            $result = self::_saveAsCakeUploadedFile($file, $destination);
         } else {
             $result = self::_saveAsPHPNativeUploadedFile($file, $destination);
         }
@@ -142,7 +145,7 @@ class FileManager
         return $result;
     }
 
-    protected static function _saveAsDiacotorosUploadedFile(UploadedFile $file, string $targetLocation)
+    protected static function _saveAsCakeUploadedFile(UploadedFile $file, string $targetLocation)
     {
         $originalFilename = $file->getClientFilename();
         $mediaType = $file->getClientMediaType(); // mime type
@@ -169,14 +172,20 @@ class FileManager
                 'file_path' => $filePath,
                 'file_mime' => $mediaType
             ];
-        } catch (Exception $exc) {
+        } catch (\Exception $exc) {
             return null;
         }
     }
 
+    /**
+     * Handle file upload using PHP move_uploaded_file()
+     *
+     * @param $file
+     * @param bool $destination
+     */
     protected static function _saveAsPHPNativeUploadedFile($file, $destination = false)
     {
-        // Implement PHP native uploading, using move_uploade_file();
+        // Implement PHP native uploading, using move_uploaded_file();
     }
 
     /**

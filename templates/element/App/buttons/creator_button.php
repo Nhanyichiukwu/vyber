@@ -6,33 +6,300 @@
 use App\Utility\RandomString;
 use Cake\Routing\Router;
 
-$vibelyData = [
-    'drawerID' => mb_strtolower(
-        RandomString::generateString(32, 'mixed', 'alpha')
-    ),
+
+$drawerID = mb_strtolower(
+    RandomString::generateString(32, 'mixed', 'alpha')
+);
+$drawerData = json_encode([
+    'drawerID' => $drawerID,
     'hasCloseBtn' => false,
     'drawerMax' => '100%',
-    'dataSrc' => '/posts/create'
-];
-$vibelyData = json_encode($vibelyData);
+    'alwaysReload' => true,
+]);
+
+
+//data-toggle="drawer"
+/*aria-controls="#creatorDialog"*/
+/*data-config='<?= $drawerData ?>'*/
+
+$creatorTools = mb_strtolower(
+    RandomString::generateString(32, 'mixed', 'alpha')
+)
 ?>
-<div id="creatorBtn" class="_ycGkU4 gvv3olex jj1wio1k x5jpjwdh z-9">
-    <a href="<?= Router::url('/posts/create?data_target=app_view', true) ?>"
-       role="link"
-       data-toggle="drawer"
-       aria-controls="#creator-drawer"
-       data-config='<?= $vibelyData ?>'
-       class="a3jnltym btn btn-app bzakvszf lzkw2xxp n1ft4jmn px-3 qrfe0hvl shadow-lg">
-        <span class="_af4H">
-<!--            <svg style="width:24px;height:24px" viewBox="0 0 24 24">-->
-            <!--                <path fill="currentColor" d="M17 2H19V5H22V7H19V10H17V7H14V5H17V2M7 5H11V7H7C5.9 7 5 7.9 5 9V17C5 18.11 5.9 19 7 19H15C16.11 19 17 18.11 17 17V13H19V17C19 19.21 17.21 21 15 21H7C4.79 21 3 19.21 3 17V9C3 6.79 4.79 5 7 5Z"></path>-->
-            <!--            </svg>-->
-            <svg style="width:24px;height:24px" viewBox="0 0 24 24">
-                <path fill="currentColor"
-                      d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12H20A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4V2M18.78,3C18.61,3 18.43,3.07 18.3,3.2L17.08,4.41L19.58,6.91L20.8,5.7C21.06,5.44 21.06,5 20.8,4.75L19.25,3.2C19.12,3.07 18.95,3 18.78,3M16.37,5.12L9,12.5V15H11.5L18.87,7.62L16.37,5.12Z"/>
-            </svg>
-            <span class="sr-only">What's Up</span>
-        </span>
-    </a>
+<div id="creatorBtn" class="_ycGkU4 gvv3olex jj1wio1k x5jpjwdh z_Gtob d-none d-md-block">
+    <div class="_oFb7Hd">
+        <a href="javascript:void()"
+           data-bs-toggle="modal"
+           data-bs-target="#creatorTools"
+            class="a3jnltym btn btn-app btn-icon bzakvszf lh_wxx lzkw2xxp qrfe0hvl shadow-lg">
+            <i class="icon mdi mdi-shape-square-plus"></i>
+            <span class="btn-label sr-only">Share</span>
+        </a>
+    </div>
+</div>
+<div id="creatorTools" class="modal" data-bs-backdrop="static"
+     data-bs-keyboard="false" tabindex="-1"
+     aria-labelledby="creatorToolsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down fHQbDJMO">
+        <div class="modal-content yQx6NY6F">
+            <div class="modal-header">
+                <h5 class="modal-title" id="creatorToolsLabel">What would you like to do?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-app-body">
+                <div class="_vYaq align-items-start d-flex flex-wrap gutters-xs row row-cols-2 row-cols-md-3">
+                    <div class="col">
+                        <?php
+                        //                        $thoughtDrawer = mb_strtolower(
+                        //                            RandomString::generateString(32, 'mixed', 'alpha')
+                        //                        );
+                        //                        $thought = json_encode([
+                        //                            'drawerID' => $thoughtDrawer,
+                        //                            'hasCloseBtn' => false,
+                        //                            'drawerMax' => '100%',
+                        //                        ]);
+                        ?>
+                        <a href="<?= Router::url('/posts/create?what=thought', true) ?>"
+                           role="button"
+                           data-ov-toggle="modal"
+                           data-ov-target="#creatorDialog"
+                           data-uri="<?= Router::url('/posts/create?what=thought', true) ?>"
+                           data-modal-control='{"class":"d-flex flex-column flex-column-reverse"}'
+                           data-dialog-control='{"css":{"maxHeight":"100%","maxWidth":"35rem"},
+                   "class":"align-self-end m-md-auto mx-0 my-0 my-md-5 w-100"}'
+                           data-always-reload="true"
+                           aria-controls="#creatorDialog"
+                           data-config='<?= $drawerData ?>'
+                           class="btn btn-icon bzakvszf lh_wxx qrfe0hvl">
+                            <i class="icon mdi mdi-head-lightbulb"></i>
+                            <span class="btn-label">Share a Thought</span>
+                        </a>
+                    </div>
+                    <div class="col">
+                        <?php
+                        /*$momentDrawer = mb_strtolower(
+                            RandomString::generateString(32, 'mixed', 'alpha')
+                        );
+                        $moment = json_encode([
+                            'drawerID' => $momentDrawer,
+                            'hasCloseBtn' => false,
+                            'drawerMax' => '100%',
+                        ]);*/
+                        ?>
+                        <a href="<?= Router::url('/posts/create?what=moment', true) ?>"
+                           role="button"
+                           data-ov-toggle="modal"
+                           data-ov-target="#creatorDialog"
+                           data-title='Create Post'
+                           data-uri="<?= Router::url('/posts/create?what=moment', true) ?>"
+                           data-modal-control='{"class":"d-flex flex-column flex-column-reverse"}'
+                           data-dialog-control='{"css":{"maxHeight":"100%","maxWidth":"35rem"},
+                   "class":"align-self-end m-md-auto mx-0 my-0 my-md-5 w-100"}'
+                           data-window="frame"
+                           data-always-reload="true"
+                           aria-controls="#creatorDialog"
+                           data-config='<?= $drawerData ?>'
+                           class="btn btn-icon bzakvszf lh_wxx qrfe0hvl">
+                            <i class="icon icofont-expressionless"></i>
+                            <span class="btn-label">Share my Moment</span>
+                        </a>
+                    </div>
+                    <div class="col">
+                        <?php
+                        /*$shoutoutDrawer = mb_strtolower(
+                            RandomString::generateString(32, 'mixed', 'alpha')
+                        );
+                        $shoutout = json_encode([
+                            'drawerID' => $shoutoutDrawer,
+                            'hasCloseBtn' => false,
+                            'drawerMax' => '100%',
+                        ]);*/
+                        ?>
+                        <a href="<?= Router::url('/posts/create?what=shout_out', true) ?>"
+                           role="button"
+                           data-ov-toggle="modal"
+                           data-ov-target="#creatorDialog"
+                           data-title='Create Post'
+                           data-uri="<?= Router::url('/posts/create?what=shoutout', true) ?>"
+                           data-modal-control='{"class":"d-flex flex-column flex-column-reverse"}'
+                           data-dialog-control='{"css":{"maxHeight":"100%","maxWidth":"35rem"},
+                   "class":"align-self-end m-md-auto mx-0 my-0 my-md-5 w-100"}'
+                           data-window="frame"
+                           data-always-reload="true"
+                           aria-controls="#creatorDialog"
+                           data-config='<?= $drawerData ?>'
+                           class="btn btn-icon bzakvszf lh_wxx qrfe0hvl">
+                            <i class="icon mdi mdi-account-voice"></i>
+                            <span class="btn-label">Send a Shout Out</span>
+                        </a>
+                    </div>
+                    <div class="col">
+                        <?php
+                        /*$goLiveDrawer = mb_strtolower(
+                            RandomString::generateString(32, 'mixed', 'alpha')
+                        );
+                        $goLive = json_encode([
+                            'drawerID' => $goLiveDrawer,
+                            'hasCloseBtn' => false,
+                            'drawerMax' => '100%',
+                        ]);*/
+                        ?>
+                        <a href="<?= Router::url('/posts/create?intent=go_live&what=video', true) ?>"
+                           role="button"
+                           data-ov-toggle="modal"
+                           data-ov-target="#creatorDialog"
+                           data-title='Create Post'
+                           data-uri="<?= Router::url('/posts/create?intent=go_live&what=video', true) ?>"
+                           data-modal-control='{"class":"d-flex flex-column flex-column-reverse"}'
+                           data-dialog-control='{"css":{"maxHeight":"100%","maxWidth":"35rem"},
+                   "class":"align-self-end m-md-auto mx-0 my-0 my-md-5 w-100"}'
+                           data-window="frame"
+                           data-always-reload="true"
+                           aria-controls="#creatorDialog"
+                           data-config='<?= $drawerData ?>'
+                           class="btn btn-icon bzakvszf lh_wxx qrfe0hvl">
+                            <i class="fe fe-video icon"></i>
+                            <span class="btn-label">Go Live</span>
+                        </a>
+                    </div>
+
+                    <div class="col">
+                        <?php
+                        /*$goLiveDrawer = mb_strtolower(
+                            RandomString::generateString(32, 'mixed', 'alpha')
+                        );
+                        $goLive = json_encode([
+                            'drawerID' => $goLiveDrawer,
+                            'hasCloseBtn' => false,
+                            'drawerMax' => '100%',
+                        ]);*/
+                        ?>
+                        <a href="<?= Router::url('/posts/create?intent=go_live&what=audio', true) ?>"
+                           role="button"
+                           data-ov-toggle="modal"
+                           data-ov-target="#creatorDialog"
+                           data-title='Create Post'
+                           data-uri="<?= Router::url('/posts/create?intent=go_live&what=audio', true) ?>"
+                           data-modal-control='{"class":"d-flex flex-column flex-column-reverse"}'
+                           data-dialog-control='{"css":{"maxHeight":"100%","maxWidth":"35rem"},
+                   "class":"align-self-end m-md-auto mx-0 my-0 my-md-5 w-100"}'
+                           data-window="frame"
+                           data-always-reload="true"
+                           aria-controls="#creatorDialog"
+                           data-config='<?= $drawerData ?>'
+                           class="btn btn-icon bzakvszf lh_wxx qrfe0hvl">
+                            <i class="icofont-record icon"></i>
+                            <span class="btn-label">Sing Live</span>
+                        </a>
+                    </div>
+                    <div class="col">
+                        <?php
+                        /*$videoDrawer = mb_strtolower(
+                            RandomString::generateString(32, 'mixed', 'alpha')
+                        );
+                        $video = json_encode([
+                            'drawerID' => $videoDrawer,
+                            'hasCloseBtn' => false,
+                            'drawerMax' => '100%',
+                        ]);*/
+                        ?>
+                        <a href="<?= Router::url('/posts/create?what=video', true) ?>"
+                           role="button"
+                           data-ov-toggle="modal"
+                           data-ov-target="#creatorDialog"
+                           data-title='Create Post'
+                           data-uri="<?= Router::url('/posts/create?what=video', true) ?>"
+                           data-modal-control='{"class":"d-flex flex-column flex-column-reverse"}'
+                           data-dialog-control='{"css":{"maxHeight":"100%","maxWidth":"35rem"},
+                   "class":"align-self-end m-md-auto mx-0 my-0 my-md-5 w-100"}'
+                           data-window="frame"
+                           data-always-reload="true"
+                           aria-controls="#creatorDialog"
+                           data-config='<?= $drawerData ?>'
+                           class="btn btn-icon bzakvszf lh_wxx qrfe0hvl">
+                            <i class="icon icofont-ui-video-play"></i>
+                            <span class="btn-label">Post a Video</span>
+                        </a>
+                    </div>
+                    <div class="col">
+                        <?php
+                        /*$songDrawer = mb_strtolower(
+                            RandomString::generateString(32, 'mixed', 'alpha')
+                        );
+                        $song = json_encode([
+                            'drawerID' => $songDrawer,
+                            'hasCloseBtn' => false,
+                            'drawerMax' => '100%',
+                        ]);*/
+                        ?>
+                        <a href="<?= Router::url('/posts/create?what=audio', true) ?>"
+                           role="button"
+                           data-ov-toggle="modal"
+                           data-ov-target="#creatorDialog"
+                           data-title='Create Post'
+                           data-uri="<?= Router::url('/posts/create?what=audio', true) ?>"
+                           data-modal-control='{"class":"d-flex flex-column flex-column-reverse"}'
+                           data-dialog-control='{"css":{"maxHeight":"100%","maxWidth":"35rem"},
+                   "class":"align-self-end m-md-auto mx-0 my-0 my-md-5 w-100"}'
+                           data-window="frame"
+                           data-always-reload="true"
+                           aria-controls="#creatorDialog"
+                           data-config='<?= $drawerData ?>'
+                           class="btn btn-icon bzakvszf lh_wxx qrfe0hvl">
+                            <i class="icon icofont-music"></i>
+                            <span class="btn-label">Post a Song</span>
+                        </a>
+                    </div>
+                    <div class="col">
+                        <?php
+                        /*$photoDrawer = mb_strtolower(
+                            RandomString::generateString(32, 'mixed', 'alpha')
+                        );
+                        $photo = json_encode([
+                            'drawerID' => $photoDrawer,
+                            'hasCloseBtn' => false,
+                            'drawerMax' => '100%',
+                        ]);*/
+                        ?>
+                        <a href="<?= Router::url('/posts/create?what=photo', true) ?>"
+                           role="button"
+                           data-ov-toggle="modal"
+                           data-ov-target="#creatorDialog"
+                           data-title='Create Post'
+                           data-uri="<?= Router::url('/posts/create?what=photo', true) ?>"
+                           data-modal-control='{"class":"d-flex flex-column flex-column-reverse"}'
+                           data-dialog-control='{"css":{"maxHeight":"100%","maxWidth":"35rem"},
+                   "class":"align-self-end m-md-auto mx-0 my-0 my-md-5 w-100"}'
+                           data-window="frame"
+                           data-always-reload="true"
+                           aria-controls="#creatorDialog"
+                           data-config='<?= $drawerData ?>'
+                           class="btn btn-icon bzakvszf lh_wxx qrfe0hvl">
+                            <i class="icon icofont-image"></i>
+                            <span class="btn-label">Post a Photo</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
+
+<script>
+    async function postData(url = '', data = {}) {
+        const response = await fetch(url, {
+            method: 'GET',
+            mode: 'same-origin',
+            cache: 'default',
+            credentials: 'same-origin',
+            // headers: {
+            //     'Content-Type': 'application/json'
+            // },
+            redirect: 'follow',
+            // body: JSON.stringify(data)
+        });
+        return response.text();
+    }
+    // postData('settings/profile').then(data => {console.log(data)});
+</script>

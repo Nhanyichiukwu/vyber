@@ -5,8 +5,11 @@ namespace App\Model\Table;
 
 use App\Model\Entity\Email;
 use App\Model\Entity\Phone;
+use App\Model\Entity\User;
+use App\Utility\CustomString;
 use Cake\Collection\Collection;
 use Cake\Database\Expression\QueryExpression;
+use Cake\Datasource\Exception\RecordNotFoundException;
 use Cake\Event\Event;
 use Cake\ORM\Locator\TableLocator;
 use Cake\ORM\Query;
@@ -261,10 +264,6 @@ class UsersTable extends Table
             ->notEmptyString('password');
 
         $validator
-            ->scalar('gender')
-            ->allowEmptyString('gender');
-
-        $validator
             ->scalar('account_type')
             ->allowEmptyString('account_type');
 
@@ -277,8 +276,8 @@ class UsersTable extends Table
             ->allowEmptyString('activated');
 
         $validator
-            ->boolean('is_hall_of_famer')
-            ->allowEmptyString('is_hall_of_famer');
+            ->boolean('is_verified')
+            ->allowEmptyString('is_verified');
 
         $validator
             ->scalar('time_zone')
@@ -332,16 +331,119 @@ class UsersTable extends Table
      */
     public function findUsersSimilarTo( Query $query, array $options )
     {
-        $query = $query->contain([
+        $targetUser = is_string($options['target_user'])
+            ? $this->getUser($options['target_user'])
+            : $options['target_user'];
+
+        $appUser = null;
+        if (isset($options['user'])) {
+            $appUser = is_string($options['user'])
+                ? $this->getUser($options['user'])
+                : $options['user'];
+        }
+
+        $query = $query
+//            ->whereNotNull(['country_of_residence', 'state_of_residence', 'current_city'])
+            ->contain([
             'Profiles',
-//            'Emails',
-//            'Phones'
         ]);
-        $query = $this->findPeopleWithSameNameAs($query, $options);
-        $query = $this->findPeopleWithSameBioAs($query, $options);
-        $query = $this->findPeopleInSameCountryAs($query, $options);
-        $query = $this->findPeopleInSameProvinceAs($query, $options);
-        $query = $this->findPeopleInSameCityAs($query, $options);
+
+        $mainConditions = $locationConditions = [];
+
+        $profileAssoc = $this->getAssociation('Profiles')->getTarget();
+
+
+        /********************************************************************************/
+        /*** First criteria: the users must have at least a role or a genre in common ***/
+        /********************************************************************************/
+        // People with similar roles as the targetUser
+        if ($targetUser->profile->hasValue('roles')) {
+            $roles = \collection($targetUser->profile->getRoles())
+                ->extract('slug')->toArray();
+            $similarRoles = $profileAssoc->find()
+                ->select(['user_refid'])
+                ->distinct()
+                ->matching('Roles', function (Query $q) use($roles) {
+                    return $q->where(['Roles.slug IN' => $roles]);
+                });
+
+            $mainConditions[] = ['Users.refid IN' => $similarRoles];
+        }
+
+        // People with similar genres as the user
+        if ($targetUser->profile->hasValue('genres')) {
+            $genres = \collection($targetUser->profile->getGenres())
+                ->extract('slug')->toArray();
+            $similarGenres = $profileAssoc->find()
+                ->select(['user_refid'])
+                ->distinct()
+                ->matching('Genres', function (Query $q) use ($genres) {
+                    return $q->where(['Genres.slug IN' => $genres]);
+                });
+            $mainConditions[] = ['Users.refid IN' => $similarGenres];
+        }
+
+        if (!empty($mainConditions)) {
+            $query = $query->where(['OR' => $mainConditions]);
+        }
+
+
+        /*************************************************************************************/
+        /*** And, secondly they must at least live in the same country, province, or city. ***/
+        /*************************************************************************************/
+
+        // Profiles of people who live in the same country
+        if ($targetUser->profile->hasValue('country_of_residence')) {
+            $sameCountry = $profileAssoc->find()
+                ->select(['user_refid'])
+                ->distinct()
+                ->where([
+                    'country_of_residence' => $targetUser->profile->getCountryOfResidence()
+                ]);
+            $locationConditions[] = ['Users.refid IN' => $sameCountry];
+        }
+
+        // Profiles of people who live in the same state/province as the user
+        if ($targetUser->profile->hasValue('state_of_residence')) {
+            $sameProvince = $profileAssoc->find()
+                ->select(['user_refid'])
+                ->distinct()
+                ->where([
+                    'state_of_residence' => $targetUser->profile->getStateOfResidence()
+                ]);
+            $locationConditions[] = ['Users.refid IN' => $sameProvince];
+        }
+
+        // People in the same city as the user
+        if ($targetUser->profile->hasValue('current_city')) {
+            $sameCity = $profileAssoc->find()
+                ->select(['user_refid'])
+                ->distinct()
+                ->where([
+                    'current_city' => $targetUser->profile->getCurrentCity()
+                ]);
+            $locationConditions[] = ['Users.refid IN' => $sameCity];
+        }
+        if (!empty($locationConditions)) {
+            $query = $query->andWhere(['OR' => $locationConditions]);
+        }
+
+
+        $query = $query->having(['Users.refid !=' => $targetUser->refid]);
+        if ($appUser instanceof User) {
+            $query = $query->andHaving(['Users.refid !=' => $appUser->refid]);
+        }
+
+        /********* DO NOT REMOVE *********/
+//        $query = $query->where(
+//            function (QueryExpression $exp, Query $query) use ($sameCountry, $sameProvince, $sameCity) {
+//                return $query->newExpr()
+//                    ->or(['Users.refid IN' => $sameCountry])
+//                    ->add(['Users.refid IN' => $sameProvince])
+//                    ->add(['Users.refid IN' => $sameCity]);
+//            }
+//        );
+        /************ DO NOT REMOVE ************/
 
         return $query;
     }
@@ -370,7 +472,7 @@ class UsersTable extends Table
                 'Users.lastname LIKE' => '%' . $user->getLastname() . '%'
             ]
         ]);
-        if (! empty($user->getOthernames())) {
+        if (!empty($user->getOthernames())) {
             $query = $query->where([
                 'OR' => [
                     'Users.othernames LIKE' => '%'.$user->getOthernames().'%'
@@ -388,11 +490,15 @@ class UsersTable extends Table
      * @return \Cake\ORM\Query The modified query object
      */
     public function findPeopleWithSameBioAs( Query $query, array $options ) {
-        $user = $options['user'];
+        $user = is_string($options['user'])
+            ? $this->getUser($options['user'])
+            : $options['user'];
         if (! empty($user->profile->getBio())) {
             $query = $query->where([
-                'MATCH(Profiles.about) AGAINST(\'' . addslashes($user->profile->getBio())
-                . '\' IN BOOLEAN MODE)'
+                'OR' => [
+                    'MATCH(Profiles.description) AGAINST(\'' . addslashes($user->profile->getBio())
+                    . '\' IN BOOLEAN MODE)'
+                ]
             ]);
         }
 
@@ -405,20 +511,27 @@ class UsersTable extends Table
      * @param array $options
      * @return \Cake\ORM\Query The modified query object
      */
-    public function findPeopleInSameCountryAs( Query $query, array $options ) {
-        $user = $options['user'];
-        $newQuery = clone $query;
+    public function findByCountry(Query $query, array $options)
+    {
+        $country = $options['country'];
         if (!empty($user->profile->getCountryOfResidence())) {
-            $newQuery = $newQuery->where([
-                'OR' => [
-                    "MATCH(Profiles.country_of_residence) AGAINST('+"
-                    . $user->profile->getCountryOfResidence()
-                    . "' IN BOOLEAN MODE)"
-                ]
-            ]);
+//            $query = $query->where([
+//                'OR' => [
+//                    "MATCH(Profiles.country_of_residence) AGAINST('+"
+//                    . $user->profile->getCountryOfResidence()
+//                    . "' IN BOOLEAN MODE)"
+//                ]
+//            ]);
+            $query = $query->matching('Profiles', function (Query $q) use($user) {
+                return $q->where([
+                    'OR' => [
+                        'Profiles.country_of_residence' => $user->profile->getCountryOfResidence()
+                    ]
+                ]);
+            });
         }
 
-        return $newQuery;
+        return $query;
     }
 
     /**
@@ -429,20 +542,39 @@ class UsersTable extends Table
      * @return \Cake\ORM\Query The modified query object containing users who
      * live in same city as the given user
      */
-    public function findPeopleInSameCityAs( Query $query, array $options ) {
-        $user = $options['user'];
-        $newQuery = clone $query;
-        if (! empty($user->profile->getCurrentCity())) {
-            $newQuery = $newQuery->where([
-                'OR' => [
-                    "MATCH(Profiles.current_city) AGAINST('+"
-                    . $user->profile->getCurrentCity()
-                    . "' IN BOOLEAN MODE)"
-                ]
-            ]);
+    public function findByCity( Query $query, array $options ) {
+//        $user = $options['user'];
+//        $newQuery = clone $query;
+//        if (! empty($user->profile->getCurrentCity())) {
+//            $newQuery = $newQuery->where([
+//                'OR' => [
+//                    "MATCH(Profiles.current_city) AGAINST('+"
+//                    . $user->profile->getCurrentCity()
+//                    . "' IN BOOLEAN MODE)"
+//                ]
+//            ]);
+//        }
+        $user = is_string($options['user'])
+            ? $this->getUser($options['user'])
+            : $options['user'];
+
+
+        if (!empty($user->profile->getCurrentCity())) {
+//            $query = $query->where([
+//                'OR' => [
+//                    "MATCH(Profiles.country_of_residence) AGAINST('+"
+//                    . $user->profile->getCountryOfResidence()
+//                    . "' IN BOOLEAN MODE)"
+//                ]
+//            ]);
+            $query = $query->matching('Profiles', function (Query $q) use($user) {
+                return $q->where([
+                    'OR' => ['Profiles.current_city' => $user->profile->getCurrentCity()]
+                ]);
+            });
         }
 
-        return $newQuery;
+        return $query;
     }
     /**
      * Finds users similar to a given user
@@ -451,20 +583,71 @@ class UsersTable extends Table
      * @param array $options
      * @return \Cake\ORM\Query The modified query object
      */
-    public function findPeopleInSameProvinceAs( Query $query, array $options ) {
-        $user = $options['user'];
-        $newQuery = clone $query;
-        if (! empty($user->profile->getStateOfResidence())) {
-            $newQuery = $newQuery->where([
-                'OR' => [
-                    "MATCH(Profiles.state_of_residence) AGAINST('+"
-                    . $user->profile->getStateOfResidence()
-                    . "' IN BOOLEAN MODE)"
-                ]
-            ]);
-        }
+    public function findByProvince( Query $query, array $options )
+    {
+//        $user = $options['user'];
+//        $newQuery = clone $query;
+//        if (!empty($user->profile->getStateOfResidence())) {
+//            $newQuery = $newQuery->where([
+//                'OR' => [
+//                    "MATCH(Profiles.state_of_residence) AGAINST('+"
+//                    . $user->profile->getStateOfResidence()
+//                    . "' IN BOOLEAN MODE)"
+//                ]
+//            ]);
+//        }
+//
+//        return $newQuery;
+        $user = is_string($options['user'])
+            ? $this->getUser($options['user'])
+            : $options['user'];
 
-        return $newQuery;
+
+        if (!empty($user->profile->getStateOfResidence())) {
+            $query = $query->matching('Profiles', function (Query $q) use($user) {
+                return $q->where([
+                    'OR' => ['Profiles.state_of_residence' => $user->profile->getStateOfResidence()]
+                ]);
+            });
+        }
+        return $query;
+    }
+
+    /**
+     * @param Query $query
+     * @param array|null $options
+     * @return Query
+     */
+    public function findUsersWithSimilarRoles(Query $query, array $options = null)
+    {
+        $roles = $options['roles'];
+        $query = $query
+            ->matching('Profiles.Roles', function (Query $q) use($roles) {
+            return $q->where([
+                'OR' => ['Roles.slug IN' => $roles]
+            ]);
+        });
+
+        return $query;
+    }
+
+    /**
+     * @param Query $query
+     * @param array|null $options
+     * @return Query
+     */
+    public function findUsersWithSimilarGenres(Query $query, array $options = null)
+    {
+        $genres = $options['genres'];
+        $query = $query
+            ->distinct()
+            ->matching('Profiles.Genres', function (Query $q) use($genres) {
+            return $q->where([
+                'OR' => ['Genres.slug IN' => $genres]
+            ]);
+        });
+
+        return $query;
     }
 
     /**
@@ -548,15 +731,32 @@ class UsersTable extends Table
     }
 
     /**
-     * @param Query $query
      * @param array|null $options
      * @return Query
      */
-    public function fetchArtists(Query $query, array $options = null)
+    public function fetchArtists($query, array $options = null)
     {
+        $artisticRoles = ['singer','rapper','backup-singer','vocalist'];
 
+        $query = $query->filter(function ($user) use ($artisticRoles) {
+            $result = false;
+            if (count($user->profile->roles)
+            ) {
+                $thisUserRoles = (array) \collection($user->profile->roles)
+                    ->extract(
+                        function ($userRoleObj) {
+                            return $userRoleObj->slug;
+                        }
+                    )
+                    ->toArray();
+                $intersection = array_intersect($thisUserRoles, $artisticRoles);
+                if (count($intersection)) {
+                    $result = true;
+                }
+            }
 
-
+            return $result;
+        });
 
         return $query;
     }
@@ -565,9 +765,9 @@ class UsersTable extends Table
     {
         $query = $this->find()->contain([
             'Profiles' => [
-                'UserGenres' => ['Genres'],
-                'UserRoles' => ['Roles'],
-                'UserIndustries' => ['Industries']
+                'Genres',
+                'Roles',
+                'Industries'
             ]
         ]);
 
@@ -575,16 +775,38 @@ class UsersTable extends Table
             $industry = unserialize(
                 base64_decode($filters['_i'])
             );
+            $industry = CustomString::hyphenate($industry);
             $query = $query->filter(function ($row) use($industry) {
-                $thisUserIndustries = (array) \collection($row->profile->user_industries)->extract(
-                    function ($userGenreObj) {
-                        return $userGenreObj->industry->slug;
-                    }
+                $thisUserIndustries = (array) \collection(
+                    $row->profile->industries
                 )
+                    ->extract(function ($userIndustryObj) {
+                        return $userIndustryObj->slug;
+                    })
                     ->toArray();
-                $result = in_array($industry, $thisUserIndustries);
-                return $result;
+                return in_array($industry, $thisUserIndustries);
             });
+//            $profileAssoc = $this->getAssociation('Profiles')->getTarget();
+//            $industryAssoc = $profileAssoc->getAssociation('Industries')->getTarget();
+//            $matchingIndustry = $industryAssoc->find()
+//                ->select(['id'])
+//                ->distinct()
+//                ->where(['slug' => $industry]);
+//            $profilesMatchingIndustry = $profileAssoc->find()
+//                ->select(['user_refid'])
+//                ->distinct()
+//                ->where(['industries LIKE' => '%' . $industry . '%']);
+//            pr($profilesMatchingIndustry->all());
+//            exit;
+        }
+        if (isset($filters['_u_p'])) {
+
+            $userProfession = Inflector::camelize($filters['_u_p']);
+            $userProfession = Inflector::pluralize($userProfession);
+            $fetchUserByProfession = 'fetch' . $userProfession;
+            if (method_exists($this, $fetchUserByProfession)) {
+                $query = $this->{$fetchUserByProfession}($query);
+            }
         }
 
         if (count($filters)) {
@@ -594,49 +816,50 @@ class UsersTable extends Table
         return $query;
     }
 
-    private function applyFilters($query, array $filterParams)
+    private function applyFilters($query, array $filters)
     {
-        if (isset($filterParams['genre'])) {
-            $query = $query->filter(function ($row) use ($filterParams) {
+        if (isset($filters['genre'])) {
+            $query = $query->filter(function ($row) use ($filters) {
                 $result = false;
-                if (count($row->profile->user_genres)) {
-                    $thisUserRoles = (array) \collection($row->profile->user_genres)->extract(
+                if (count($row->profile->genres)) {
+                    $thisUserRoles = (array) \collection($row->profile->genres)->extract(
                         function ($userGenreObj) {
-                            return $userGenreObj->genre->slug;
+                            return $userGenreObj->slug;
                         }
                     )
                         ->toArray();
-                    $result = in_array($filterParams['genre'], $thisUserRoles);
+                    $result = in_array($filters['genre'], $thisUserRoles);
                 }
                 return $result;
             });
         }
-        if (isset($filterParams['category'])) {
-//            $query = $query->filter(function ($row) use ($filterParams) {
-//                $result = false;
-//                if (count($row->profile->user_genres)) {
-//                    $thisUserRoles = (array) \collection($row->profile->user_genres)->extract(
-//                        function ($item) {
-//                            return $item->slug;
-//                        }
-//                    )
-//                        ->toArray();
-//                    $result = in_array($filterParams['genre'], $thisUserRoles);
-//                }
-//                return $result;
-//            });
-        }
-        if (isset($filterParams['role'])) {
-            $query = $query->filter(function ($row) use ($filterParams) {
+        if (isset($filters['category'])) {
+            $query = $query->filter(function ($row) use ($filters) {
                 $result = false;
-                if (count($row->profile->user_roles)) {
-                    $thisUserRoles = (array) \collection($row->profile->user_roles)->extract(
-                        function ($userRoleObj) {
-                            return $userRoleObj->role->slug;
+                if (count($row->profile->genres)) {
+                    $thisUserCateories = (array) \collection($row->profile->genres)->extract(
+                        function ($item) {
+                            return $item->slug;
                         }
                     )
                         ->toArray();
-                    $result = in_array($filterParams['role'], $thisUserRoles);
+                    $result = in_array($filters['category'], $thisUserCateories);
+                }
+                return $result;
+            });
+        }
+        if (isset($filters['role'])) {
+            $query = $query->filter(function ($row) use ($filters) {
+                $result = false;
+                if (count($row->profile->roles)) {
+                    $thisUserRoles = (array) \collection($row->profile->roles)
+                        ->extract(
+                        function ($userRoleObj) {
+                            return $userRoleObj->slug;
+                        }
+                    )
+                        ->toArray();
+                    $result = in_array($filters['role'], $thisUserRoles);
                 }
 
                 return $result;
@@ -665,7 +888,7 @@ class UsersTable extends Table
         // Offers suggestions to a user based on his/her personality
         // For example: if the user is a song writer, suggested users could
         // include producers, recording artists, etc.
-        // This is a very complex suggestion algorythme
+        // This is a very complex suggestion algorithm
         if(in_array('personality', $bases)) {
 
         }
@@ -694,6 +917,290 @@ class UsersTable extends Table
         return $suggestions;
     }
 
+
+    /**
+     * Fetch a list of people who the user might know.
+     *
+     * The idea is to find people who the current user might know
+     * using a list of persons who the user is already connected to,
+     * we try to compare between their own connections to see if we can
+     * find anyone the user might know
+     * Example: Using user Mike and friends
+     * Mike: friends[John, Joe, Jane, Toby, Ella];
+     * John: friends[Peter, James, Joahn, Joe, Mike]
+     * Joe: friends[Toby, Ella, Mike, John]
+     * In the above example Mike is the principal person.
+     * Given that John and Joe, Joe and Toby, Joe and Ella, all have
+     * people in common, then there is a great chance
+     * that Mike might know some of John's and Joe's
+     * connections, and so on...
+     * Now for each two connections of Mike's, we check if they too, are
+     * connected to each other, if true, we import their connections
+     * as people that Mike might know... Just keeping it shallow...
+     *
+     * @param Query $query
+     * @param array $options
+     * Valid keys include 'user' (required): The user to make suggestions for, and 'account'
+     * (optional): If provided, suggestions will be based on the connections of 'account',
+     * otherwise, it will default to the connections of 'user'.
+     * @return Query A list of matched users
+     */
+    public function findPossibleAcquaintances(Query $query, array $options = [])
+    {
+        $user = $options['user']; // The user who suggestion is being made to
+        $account = $options['account'] ?? null; // The user on whose profile the suggestion is based
+
+//        $userConnections = $this->User->connections($user->refid)
+//            ->toArray();
+        /** @var ConnectionsTable $ConnectionsAssoc */
+        $ConnectionsAssoc = $this->getAssociation('Connections')->getTarget();
+        $connections = $this->find('connections', ['user' => $user->refid])
+            ->contain(['Profiles'])
+            ->all();
+
+        if (!is_null($account)) {
+//            $userConnections = $this->User
+//                ->connections($account->refid)
+//                ->toArray();
+            $connections = $this->find('connections', ['user' => $account->refid])
+                ->contain(['Profiles'])
+                ->all();
+        }
+
+        if (!$connections->count()) {
+            return $query;
+        }
+//        $connectionsOfConnections = $this->User
+//            ->connectionsOfConnections($user->refid)
+//            ->toArray();
+//        if (!is_null($account)) {
+//            $connectionsOfConnections = $this->User
+//                ->connectionsOfConnections($account->refid)
+//                ->toArray();
+//        }
+        $from = !is_null($account) ? $account->refid : $user->refid;
+        $connectionsOfConnections = $this->find('connectionsOfConnections', [
+            'user' => $from
+        ])
+            ->all()
+            ->toArray();
+
+        $possibleAcquaintances = $connectionsOfConnections;
+
+        /*
+         * First Approach: Using foreach loop
+         * But there is a problem with this approach: Notice that each pair is
+         * only compared once in a forward direction. (John and Joe), (Jane and Toby)...;
+         * So what if connection does not exist between (John and Joe), but (Joe and Jane)?
+         */
+//        foreach (array_chunk($connectionsOfConnections, 2) as $pair)
+//        {
+//            if (sizeof($pair) < 2) return;
+//            /* @var $john \App\Model\Entity\Connection */
+//            $john = $pair[0];
+//            /* @var $joe \App\Model\Entity\Connection */
+//            $joe = $pair[1];
+//            if ($this->Connections->existsBetween($john->get('person_refid'), $joe->get('person_refid'))) {
+//                // Then it is possible that Mike knows some of their connections too.
+//                $possibleAcquaintances += $john->connections;
+//                $possibleAcquaintances += $joe->connections;
+//            }
+//            // So what if the two are not actually connected, but they still
+//            // have other mutual connections apart from Mike?
+//            // Then we should try to find who they have in common apart from Mike
+//            else {
+//                $connectionsOfJohn = (array) $john->connections;
+//                $connectionsOfJoe = (array) $joe->connections;
+//            }
+//
+//        }
+
+        /*
+         * Second approach: Using ArrayIterator with do...while loop
+         */
+//        pr($connections);
+//        exit;
+
+        $ArrayIterator = new \ArrayIterator($connections->toArray());
+        do {
+            $previousConnection = null;
+            /**
+             * Bug Discovered!
+             * @requires Revision This <b>$currentIndex</b> appears to be improperly placed. It ought to be outside the block
+             */
+            $currentIndex = 0;
+
+            // Skip the user who the suggestion is being made to
+            if (
+                $ArrayIterator->current() instanceof User &&
+                $ArrayIterator->current()->isSameAs($user)
+            ) {
+                $ArrayIterator->next();
+                $currentIndex += 1; // Increasing the counter by one
+            }
+            $currentConnection = $ArrayIterator->current(); // Say John
+//            $currentIndex += 1;
+
+            // When the index increases by 1, it means the iterator just walked
+            // pass 1 person, so we save that person as the previous person
+            if ($currentIndex >= 2) {
+                $previousConnection = $ArrayIterator->offsetGet($currentIndex - 1);
+            }
+
+            // Then our operations will be between the previous and the current persons
+            if (
+                (
+                    $previousConnection instanceof User &&
+                    !$previousConnection->isSameAs($user)
+                )
+                && $currentConnection instanceof User
+            ) {
+                if (
+                    $ConnectionsAssoc->existsBetween(
+                        $previousConnection, $currentConnection
+                    )
+                ) {
+                    // Then it is possible that Mike knows some of their connections too.
+                    $possibleAcquaintances = array_merge(
+                        $possibleAcquaintances,
+                        $this->find('connections', [
+                            'user' => $previousConnection->get('refid')
+                        ])->all()->toArray()
+                    );
+                    $possibleAcquaintances = array_merge(
+                        $possibleAcquaintances,
+                        $this->find('connections', [
+                            'user' => $currentConnection->get('refid')
+                        ])->all()->toArray()
+                    );
+                }
+                // The comparison above will look like this:
+                // First pair: (John, Joe)
+                // Second pair: (Joe, Jane)
+                // Third pair: (Jane, Toby)
+                // Fourth pair: (Toby, Ella)
+
+                // Then what if the two are not actually connected, but they still
+                // have other mutual connections apart from Mike?
+                // So we should try to find who they have in common apart from Mike
+                else {
+//                    $mutualConnections = $this->User->getMutualConnections(
+//                        $previousConnection,
+//                        $currentConnection, ['apartFrom' => $user]
+//                    );
+                    $mutualConnections = $this->find('mutualConnections', [
+                        'user_a' => $previousConnection,
+                        'user_b' => $currentConnection
+                    ])
+                        ->where(['Users.refid !=' => $user->refid])
+                        ->all()
+                        ->toArray();
+                    $possibleAcquaintances = array_merge(
+                        $possibleAcquaintances, $mutualConnections
+                    );
+//                    $connectionsOfJohn = (array) $this->Connections
+//                            ->extractActualConnectionsAsArray($previousConnection->get('refid'));
+//
+//                    $connectionsOfJoe = (array) $this->Connections
+//                            ->extractActualConnectionsAsArray($currentConnection->get('refid'));
+
+                    // Walk through John's connections to see who he has in common with Joe
+//                    array_walk($connectionsOfJohn, function (Connection $thisConnectionOfJohn, $index) use ($possibleAcquaintances) {
+//                            $connectionsOfJoe = (array) func_get_arg(2);
+//                            // Having gone through John's connections, now let's
+//                            // also go through Joe's connections
+//                            array_walk($connectionsOfJoe, function ( Connection $thisConnectionOfJoe,
+//                                    $index
+//                                )
+//                                use ($possibleAcquaintances) {
+//                                    /* @var $givenConnectionOfJohn Connection */
+//                                    $givenConnectionOfJohn = func_get_arg(2);
+//                                    if ($givenConnectionOfJohn->get('person_refid') === $thisConnectionOfJoe->get('person_refid')) {
+//                                        $possibleAcquaintances[] = $givenConnectionOfJohn; // Pushing a single connection entity into the list
+//                                    }
+//                                }, $thisConnectionOfJohn);
+//                            // Where $thisConnectionOfJohn = a picture (virtualy) of each
+//                            // person from John's connections, taking one at atime,
+//                            // to be matched against Joe's connections
+//                        }, $connectionsOfJoe);
+                }
+            }
+
+            $hasMutualConnections = (bool) $this->find('mutualConnections', [
+                'user_a' => $currentConnection,
+                'user_b' => $user
+            ])->count();
+
+            /**
+             * Imagine that out of all the connections of Mike, only one person
+             * (Eg: John) has another connection other than Mike (Eg: Anderson).
+             * Then let's check if there is anybody in Anderson's list, who is also connected to Mike,
+             * if so, then there is a chance that Mike might Know Anderson
+             * Thus: Mike and John are connected
+             * John is also connected to another person called Anderson.
+             * If Anderson has connections(A,B,C,D) and one or more of them is
+             * also connected to Mike, then there's a chance that Mike might know Anderson
+             */
+            if ($hasMutualConnections) {
+                $possibleAcquaintances[] = $currentConnection;
+                // Now we have Anderson in the list, we could also include his
+                // connections
+                $connectionsOfAnderson = $this->find('connections', [
+                    'user' => $currentConnection->refid
+                ])
+                    ->all()
+                    ->toArray();
+                $possibleAcquaintances = array_merge($possibleAcquaintances, $connectionsOfAnderson);
+            }
+
+            // Having gotten the current person in the list, we move to the next
+            // Increasing the index by 1, to help us find the previous person
+            $ArrayIterator->next();
+            $currentIndex += 1;
+        } while ($ArrayIterator->valid());
+
+        if (count($possibleAcquaintances)) {
+            // Now that we have some possible acquaintances, it is time to mine
+            // the data returned, filter off duplicate rows and people who Mike
+            // may already have been connected to or have blocked
+            $possibleAcquaintances = array_unique($possibleAcquaintances);
+
+        }
+
+        $userIDsExtract = \collection($possibleAcquaintances)
+            ->extract('Users.refid')->toArray();
+        unset($possibleAcquaintances);
+
+        if (!is_null($account) && in_array($account->refid, $userIDsExtract)) {
+            unset($userIDsExtract[
+                array_search($account->refid, $userIDsExtract)
+                ]);
+        }
+        $userIDsExtract = array_values($userIDsExtract);
+
+        return $query->whereInList('Users.refid', $userIDsExtract)
+            ->andWhere(['Users.refid !=' => $user->refid]);
+    }
+
+    public function findMutualConnections(Query $query, array $options = [])
+    {
+        $userA = $options['user_a'];
+        $userB = $options['user_b'];
+        if ($userA instanceof User) {
+            $userA = $userA->refid;
+        }
+        if ($userB instanceof User) {
+            $userB = $userB->refid;
+        }
+
+        $connectionsOfUserA = $this->find('connections', ['user' => $userA])
+            ->select(['refid'])
+            ->distinct();
+
+        return $query->find('connections', ['user' => $userB])
+            ->where(['Users.refid IN' => $connectionsOfUserA]);
+    }
+
     /**
      *
      * @param \Cake\ORM\Query $query
@@ -716,19 +1223,40 @@ class UsersTable extends Table
     /**
      * @param Query $query
      * @param array $options
-     * @return array
+     * @return Query
      */
-    public function findConnections( \Cake\ORM\Query $query, array $options)
+    public function findConnections( \Cake\ORM\Query $query, array $options): Query
     {
         $user = $options['user'];
-        $contains = [
-            'Connections' => [
-                'Correspondents' => ['Profiles']
-            ]
-        ];
-        $query = $this->findUser($query, ['user' => $user], $contains, true);
+        $ConnectionsAssoc = $this->getAssociation('Connections')->getTarget();
+        $userConnectionsIDs = $ConnectionsAssoc->find()
+            ->select(['correspondent_refid'])
+            ->distinct()
+            ->where(['Connections.user_refid' => $user]);
 
-        return $query->extract('connections')->first();
+        return $query->where(['Users.refid IN' => $userConnectionsIDs])
+            ->contain(['Profiles']);
+    }
+
+    public function findConnectionsOfConnections(Query $query, array $options = [])
+    {
+        $user = $options['user'];
+//        $connections = $this->find('connections', $options)
+//            ->select(['refid'])
+//            ->distinct();
+        $ConnectionsAssoc = $this->getAssociation('Connections')->getTarget();
+        $userConnectionsIDs = $ConnectionsAssoc->find()
+            ->select(['correspondent_refid'])
+            ->distinct()
+            ->where(['Connections.user_refid' => $user]);
+
+        $connectionsOfConnections = $ConnectionsAssoc->find()
+            ->select(['correspondent_refid'])
+            ->distinct()
+            ->where(['Connections.user_refid IN' => $userConnectionsIDs]);
+
+        return $query->where(['Users.refid IN' => $connectionsOfConnections])
+            ->contain(['Profiles']);
     }
 
 
@@ -826,6 +1354,7 @@ class UsersTable extends Table
      * @param array $contain
      * @param boolean $overwriteContain
      * @return array|\App\Model\Entity\User|null
+     * @throws RecordNotFoundException
      */
     public function getUser(
         $credential,
@@ -840,8 +1369,7 @@ class UsersTable extends Table
         ];
         if (empty($contains)) {
             $contains = $defaultContain;
-        }
-        else {
+        } else {
             if (false === $overwriteContain) {
                 $contains = array_merge($defaultContain, $contains);
             }
@@ -851,7 +1379,7 @@ class UsersTable extends Table
         $query = $this->findUser($query, ['user' => $credential])
             ->contain($contains);
 
-        return $query->first();
+        return $query->firstOrFail();
     }
 
     /**
@@ -894,5 +1422,34 @@ class UsersTable extends Table
         if (count($mutuals)) {
             return true;
         }
+    }
+    
+    public function findUserFeedSources(Query $query, array $options) 
+    {
+        $user = $options['user'];
+        $userID = $user instanceof User ? $user->refid : $user;
+        
+        $userConnections = $this->find('connections', ['user' => $userID])
+                ->clearContain()
+                ->select(['Users.refid'])
+                ->distinct();
+        
+        /** @var \App\Model\Table\FollowsTable $FollowedFeedsAssoc **/
+        $FollowedFeedsAssoc = $this->getAssociation('Followings')->getTarget();
+        $userFollowedFeeds = $FollowedFeedsAssoc->find('followings', [
+                    'user' => $userID
+                ])
+                ->select(['followee_refid'])
+                ->distinct();
+        
+        return $query
+                ->select(['Users.refid'])
+                ->distinct()
+                ->where([
+                    'OR' => [
+                        ['Users.refid IN' => $userConnections],
+                        ['Users.refid IN' => $userFollowedFeeds]
+                    ]
+                ]);
     }
 }

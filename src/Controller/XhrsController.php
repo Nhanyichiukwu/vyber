@@ -6,12 +6,16 @@ namespace App\Controller;
 use App\Controller\AppController;
 use App\Model\Entity\Post;
 use App\Model\Entity\User;
-use App\Utility\CustomMessages;
+use App\Utility\AjaxMaskedRoutes;
+use App\Utility\CustomString;
+use App\Utility\RandomString;
+use App\Utility\ServiceMessages;
 use Cake\Collection\Collection;
 use Cake\Controller\Component;
 use Cake\Controller\Exception\MissingActionException;
 use Cake\Core\Configure;
 use Cake\Event\EventInterface;
+use Cake\Http\Client\Response;
 use Cake\Http\Exception\BadRequestException;
 use Cake\Http\Exception\NotFoundException;
 use Cake\Datasource\Exception\RecordNotFoundException;
@@ -33,7 +37,7 @@ use Cake\View\CellTrait;
  * XMLHttpRequests Controller
  *
  * @property \App\Model\Table\UsersTable $Users
- * @property \App\Model\Table\EventsTable $Events
+ * @property \App\Model\Table\BkpEventsTable $Events
  * @property \App\Controller\Component\UserActivitiesComponent $UserActivities
  *
  * @method \App\Model\Entity\Post[]|\Cake\Datasource\ResultSetInterface paginate($object = null, array $settings = [])
@@ -41,7 +45,7 @@ use Cake\View\CellTrait;
 class XhrsController extends AppController
 {
     use CellTrait;
-    const UPLOAD_DIR = WWW_ROOT . 'uploads/';
+    const UPLOAD_DIR = WWW_ROOT . 'public-files/';
 
     public function initialize(): void
     {
@@ -58,22 +62,28 @@ class XhrsController extends AppController
 
     }
 
+    private function __getRoute(string $route)
+    {
+        return self::MASKED_ROUTES[$route] ?? $route;
+    }
+
     /**
-     * Handles asynchronous page load requests by matching each request to
-     * to a corresponding controller component. If a matching component was
-     * not found, this method will search within the controller for a matching
-     * method and execute it. Otherwise, an error will be raised depending on
-     * different reasons.
+     * Handles asynchronous page load requests by matching each request to a
+     * corresponding controller component. If a matching component was not
+     * found, this method will search within the controller for a matching
+     * method and execute it. Otherwise, an error will be raised depending
+     * on different reasons.
      *
-     * <b>Please Note:</b> the target component must implement a request parameter
-     * hook method, which will be used internally to read and validate
-     * requests according to its need and purpose. And must be called on
-     * initiallisation.
+     * <b>Please Note:</b> the target component must implement a request
+     * parameter hook method, which will be used internally to read and
+     * validate requests according to its need and purpose. And must be
+     * called on initiallisation.
      * For example: the ProfileComponent implements a hook method called
      * <b>_queryParamsHook()</b>.
-     * The target action/method must also return the result back to this method.
-     * But where necessary, template can be defined from the component action,
-     * which will override anyone defined in this method.
+     * The target action/method must also return the result back to this
+     * method. But where necessary, template can be defined from the
+     * component action, which will override anyone defined in this
+     * method.
      *
      * @param array $path
      * @throws MissingComponentException
@@ -82,9 +92,15 @@ class XhrsController extends AppController
      */
     public function ajaxify(...$path): void
     {
+        $request = $this->getRequest();
+        $response = $this->getResponse();
+        if (!$request->is('ajax')) {
+            throw new ForbiddenException('');
+        }
         if (!count($path)) {
             throw new BadRequestException();
         }
+
         // Prevent illegal dots in the path
         if (
             in_array('..', $path, true) ||
@@ -94,35 +110,69 @@ class XhrsController extends AppController
         if ($this->isAutoRenderEnabled()) {
             $this->disableAutoRender();
         }
+        $queryParams = $request->getQueryParams();
+        $token = [
+            'resource_handle' => 'result',
+            'resource_path' => 'ajaxify',
+        ];
+        if (isset($queryParams['token'])) {
+            $requestToken = base64_decode($queryParams['token']);
+            $token = array_merge($token, json_decode(
+                unserialize($requestToken),
+                true
+                )
+            );
+            unset($queryParams['token']);
+        }
 
-        $httpR = $this->getRequest();
-        $queryParams = $httpR->getQueryParams();
-        $token = base64_decode($queryParams['token']);
-        $token = json_decode(unserialize($token), true);
-        unset($queryParams['token']);
+        $route = AjaxMaskedRoutes::getRoute($path[0]);
 
-        $componentName = Inflector::camelize($path[0],'_');
-        $componentName = Inflector::camelize($componentName,'-');
         array_shift($path);
-        $resourceHandle = $token['resource_handle'];
         $queryParams = array_filter($queryParams);
 
         try {
-            $component = $this->loadComponent($componentName);
-//            $result = $component->handle($path, $queryParams);
-            $result = call_user_func_array([$component, 'handle'], [$path, $queryParams]);
+            $componentName = ucfirst($route);
+            if (!property_exists($this, $componentName)) {
+                $this->loadComponent($componentName, [
+                    'user' => $this->getActiveUser(),
+                ]);
+            }
+            if (!$this->{$componentName}->getConfig('user')) {
+                $this->{$componentName}->setConfig('user', $this->getActiveUser());
+            }
         } catch (\Throwable $componentException) {
             // If no matching component was found, we check whether this controller
             // has any method by that name and execute it.
-            $action = lcfirst($componentName);
+            $action = Inflector::camelize($route,'_');
+            $action = Inflector::camelize($action,'-');
+            $action = lcfirst($action);
             try {
-                $result = call_user_func_array([$this, $action], [$path, $queryParams]);
+                $result = $this->{$action}($queryParams, $path);
             } catch (\Throwable $exception) {
                 if (Configure::read('debug')) {
                     throw $exception;
                 }
                 throw new NotFoundException(
-                    CustomMessages::getMissingPageMessage()
+                    ServiceMessages::getMissingPageMessage()
+                );
+            }
+        }
+
+        // This block should only be executed if the component is loaded
+        if (!isset($result)) {
+            try {
+                $endpoint = 'handle';
+                if (count($path)) {
+                    $endpoint = lcfirst(Inflector::camelize($path[0]));
+                    array_shift($path);
+                }
+                $result = $this->{$componentName}->{$endpoint}($queryParams, $path);
+            } catch (\Throwable $componentActionError) {
+                if (Configure::read('debug')) {
+                    throw $componentActionError;
+                }
+                throw new NotFoundException(
+                    ServiceMessages::getMissingPageMessage()
                 );
             }
         }
@@ -136,11 +186,15 @@ class XhrsController extends AppController
             if (strlen($template) < 1) {
                 $template = 'ajaxify';
             }
-
+            if (substr($template, 0, 1) !== '/') {
+                $template = '/' . $template;
+            }
             $this->viewBuilder()->setTemplate($template);
         }
 
-        $content = $token['content'] ?? '';
+        $resourceHandle = $token['resource_handle'];
+        $content = $token['content'] ?? 'content';
+
         $$resourceHandle = $result;
 
         $this->set(compact("$resourceHandle", 'content'));
@@ -220,7 +274,7 @@ class XhrsController extends AppController
         $RequestTable = $this->getTableLocator()->get('Requests');
         $request = $RequestTable->find('byRefid', ['refid' => $requestId])->first();
 
-        if (! $request) {
+        if (!$request) {
             $msg = ['status' => 'error', 'message' => 'Record Not Found'];
         } else {
             $ConnectionsTbl = $this->getTableLocator()->get('Connections');
@@ -245,32 +299,79 @@ class XhrsController extends AppController
 
         return $this->getResponse()->withType('json')->withStringBody(json_encode($msg));
     }
+//
+//
+//    public function post(array $path)
+//    {
+//        $this->enableAutoRender();
+//
+//        if (!count($path)) {
+//            throw new BadRequestException();
+//        }
+//        // Prevent illegal dots in the path
+//        if (in_array('..', $path, true) || in_array('.', $path, true)) {
+//            throw new ForbiddenException();
+//        }
+//        $postID = $path[0];
+//        try {
+//            $post = $this->Posts->getByRefid($postID);
+//        } catch (RecordNotFoundException $exc) {
+//            if (Configure::read('debug')) {
+//                throw $exc;
+//            }
+//            throw new NotFoundException();
+//        }
+//
+//        $this->set(compact('post'));
+//    }
+//
+//    private function postsByUser(array $params, array $path)
+//    {
+//        $response = $this->getResponse();
+//        $account = $this->getActiveUser();
+//        if (array_key_exists('tbuid', $params)) {
+//            $account = $this->Users->get($params['tbuid']);
+//        }
+//        $postsLayout = isset($params['layout']) ? $params['layout'] : null;
+//        if (is_null($postsLayout)) {
+//            $postsLayout = 'stack';
+//        }
+//
+//        if (!$account instanceof User) {
+//            throw new BadRequestException();
+//        }
+//        $posts = $this->Newsfeed->fetchAllFor($account, 'byAuthor', $account->refid);
+//
+//        $posts = $posts->orderAsc('Posts.id');
+//        $posts = $this->paginate($posts);
+//        $arrayPosts = $posts->toArray();
+//        $collection = collection($arrayPosts);
+//
+//        $groupedPosts = $collection->groupBy(function ($post) {
+//            return $post->year;
+//        })->toArray();
+//
+//        $this->set(compact('account', 'postsLayout'));
+//
+//        return $groupedPosts;
+//    }
 
-
-    public function post(array $path)
+    public function connections(array $params, array $path)
     {
         $this->enableAutoRender();
-
         if (!count($path)) {
-            throw new BadRequestException();
-        }
-        // Prevent illegal dots in the path
-        if (in_array('..', $path, true) || in_array('.', $path, true)) {
-            throw new ForbiddenException();
-        }
-        $postID = $path[0];
-        try {
-            $post = $this->Posts->getByRefid($postID);
-        } catch (RecordNotFoundException $exc) {
-            if (Configure::read('debug')) {
-                throw $exc;
-            }
             throw new NotFoundException();
         }
+        $username = CustomString::sanitize($path[0]);
+        $account = $this->Users->getUser($username);
 
-        $this->set(compact('post'));
+        $this->loadModel('Connections');
+        $connections = $this->Connections->find('forUser', ['user' => $account->refid])
+            ->extract('correspondent')
+            ->toArray();
+
+        return $connections;
     }
-
     public function connection($userID)
     {
         $this->enableAutoRender();
@@ -309,45 +410,45 @@ class XhrsController extends AppController
         $this->set(compact('event'));
     }
 
-    /**
-     * @param array $path
-     * @param array $queryParams
-     * @return array|\Cake\Http\Response
-     */
-    public function timeline(array $path, array $queryParams)
-    {
-        $response = $this->getResponse();
-        $actor = $this->getActiveUser();
-        if (array_key_exists('tbuid', $queryParams)) {
-            $actor = $this->Users->get($queryParams['tbuid']);
-        }
-
-        if (!$actor instanceof User) {
-            return $response->withStatus(500)->withStringBody('Sorry, unkown user');
-        }
-        $timeline = $this->Newsfeed->getTimeline($actor);
-
-        $timeline = $timeline->orderAsc('Posts.id');
-        $timeline = $this->paginate($timeline);
-        $arrayTimeline = $timeline->toArray();
-        $collection = new Collection($arrayTimeline);
-        $threadedPosts = $collection->each(
-            function (Post $post) {
-                $post->set(
-                    'comments',
-                    $this->Posts->getDescendants($post->refid)
-                );
-                return $post;
-            }
-        );
-
-        $newTimeline = $threadedPosts->groupBy(function ($post) {
-            return $post->year;
-        })->toArray();
-
-        $this->viewBuilder()->setTemplatePath('Posts');
-        return $newTimeline;
-    }
+//    /**
+//     * @param array $path
+//     * @param array $queryParams
+//     * @return array|\Cake\Http\Response
+//     */
+//    private function timeline(array $queryParams = [])
+//    {
+//        $response = $this->getResponse();
+//        $actor = $this->getActiveUser();
+//        if (array_key_exists('tbuid', $queryParams)) {
+//            $actor = $this->Users->get($queryParams['tbuid']);
+//        }
+//
+//        if (!$actor instanceof User) {
+//            return $response->withStatus(500)->withStringBody('Sorry, unkown user');
+//        }
+//        $timeline = $this->Newsfeed->fetchAllFor($actor);
+//        $timeline = $timeline->orderDesc('Posts.id');
+//        $timeline = $this->paginate($timeline);
+//        $arrayTimeline = $timeline->toArray();
+//        $collection = new Collection($arrayTimeline);
+//        $threadedPosts = $collection->each(
+//            function (Post $post) {
+//                $post->set(
+//                    'comments',
+//                    $this->Posts->getDescendants($post->refid)
+//                );
+//                return $post;
+//            }
+//        );
+//
+//        $groupedTimeline = $threadedPosts->groupBy(function ($post) {
+//            return $post->year;
+//        })->toArray();
+//
+//        $this->set('account', $actor);
+//        $this->viewBuilder()->setTemplatePath('Posts');
+//        return $groupedTimeline;
+//    }
 
     public function interests($actor = null)
     {
@@ -496,19 +597,13 @@ class XhrsController extends AppController
         $requests = $this->Requests->find($box, $options)
             ->contain([
                 'Senders' => [
-                    'Profiles' => [
-                        'UserRoles' => ['Roles']
-                    ],
+                    'Profiles' => ['Roles']
                 ],
                 'Recipients' => [
-                    'Profiles' => [
-                        'UserRoles' => ['Roles']
-                    ],
+                    'Profiles' => ['Roles']
                 ],
                 'SuggestedUsers' => [
-                    'Profiles' => [
-                        'UserRoles' => ['Roles']
-                    ],
+                    'Profiles' => ['Roles'],
                 ]
             ])->toArray();
 
@@ -601,7 +696,7 @@ class XhrsController extends AppController
         echo 'New Post created with ID: ' . $postID;
     }
 
-    public function profile(...$path)
+    public function profile(array $queryParams, array $path = null)
     {
         if (!count($path)) {
             throw new BadRequestException();
@@ -675,7 +770,7 @@ class XhrsController extends AppController
 
 //        $out = lcfirst($camelCasedPage);
         $data = $requestedContent;
-        // Please note the left hand assignment with double dollar sign above.
+        // Please note the left-hand assignment with double dollar sign above.
         // It parses the value contained in $requestedPage as the name of the
         // variable used in storing the content returned.
 
@@ -710,10 +805,9 @@ class XhrsController extends AppController
         $this->render('people');
     }
 
-    public function users(array $path, array $queryParams = null)
+    public function users(array $queryParams, array $path = null)
     {
         $what = null;
-
         if (count($path)) {
 //            $what = $path[0];
             throw new NotFoundException('The page does not exist.');

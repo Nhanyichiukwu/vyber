@@ -12,7 +12,7 @@ use Cake\Utility\Text;
 ?>
 <?php
 $params = [
-'user' => $user->get('refid')
+'user' => $appUser->get('refid')
 ];
 $dataSrc = '/requests/connection?_dh=invitations';
 ?>

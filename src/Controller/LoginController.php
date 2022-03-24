@@ -11,6 +11,8 @@ use Cake\Http\Client\Request;
 use Cake\Http\Cookie\Cookie;
 use Cake\Http\ServerRequest;
 use Cake\I18n\Time;
+use Cake\Routing\Router;
+use Cake\Validation\Validation;
 
 /**
  * Login Controller
@@ -89,10 +91,19 @@ class LoginController extends AppController
                 $login = $request->getData();
                 $response = $response->withStatus(500, $status);
             }
+            $next = $this->Auth->redirectUrl();
+            if ($request->getQuery('redirect')) {
+                $next = urldecode($request->getQuery('redirect'));
+            }
+            if (!Validation::url($next)) {
+                $next = Router::url('/' . ltrim($next, '/'), true);
+            }
+
             if ($request->is('ajax')) {
                 $feedback = [
                     'status' => $status,
-                    'message' => $message
+                    'message' => $message,
+                    'redirect' => $next
                 ];
                 $feedback = json_encode($feedback);
                 $response = $response->withStringBody($feedback);
@@ -101,11 +112,6 @@ class LoginController extends AppController
 
             $this->Flash->{$status}(__($message));
             if ($status === 'success') {
-                $next = $this->Auth->redirectUrl();
-                if ($request->getQuery('redirect')) {
-                    $next = urldecode($request->getQuery('redirect'));
-                }
-
                 return $response->withLocation($next);
             }
         }

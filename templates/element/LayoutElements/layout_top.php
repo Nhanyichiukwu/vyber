@@ -30,8 +30,8 @@ $username = $this->get('activeUser') ? $activeUser->getUsername() : 'Visitor' ;
         <?= $this->Html->css('vendor/bootstrap/bootstrap.min'); ?>
         <?= $this->Html->css('bootstrap-override'); ?>
         <?= $this->Html->css('app'); ?>
-        <?= $this->Html->css('themes/e__theme'); ?>
-        <?= $this->Html->css('themes/custom_theme'); ?>
+        <?= $this->Html->css('accents/e__theme'); ?>
+        <?= $this->Html->css('accents/custom_theme'); ?>
 
         <?= $this->fetch('css'); ?>
         <?= $this->fetch('scriptTop'); ?>

@@ -3,22 +3,18 @@ declare(strict_types=1);
 
 namespace App\Controller\Component;
 
-use App\Model\Entity\Connection;
+use App\Model\Entity\Post;
 use App\Model\Entity\User;
+use App\Utility\CustomString;
 use Cake\Controller\Component;
-use Cake\Controller\ComponentRegistry;
 use Cake\Collection\Collection;
+use Cake\Controller\Exception\MissingActionException;
 use Cake\Datasource\Exception\RecordNotFoundException;
-use Cake\ORM\ResultSet;
+use Cake\Http\Exception\NotFoundException;
 use Cake\ORM\TableRegistry;
 use Cake\Utility\Inflector;
-use Cake\Utility\Text;
-use Cake\Database\Expression\QueryExpression;
 use Cake\ORM\Query;
-use Cake\Database\Query as DBQuery;
 use Cake\Validation\Validation;
-use Cake\Http\ServerRequest;
-
 
 /**
  * Newsfeed component
@@ -57,22 +53,166 @@ class NewsfeedComponent extends Component
         $this->Activities = $this->_tableLocator->get('Activities');
     }
 
-    public function handle(array $params)
+    /**
+     * @param array $params
+     * @param array $path
+     * @return mixed
+     * @throws MissingActionException
+     */
+    public function handle(array $params = [], array $path = [])
     {
-        if (count($params) > 1) {
-            $subHandler = Inflector::camelize($params[0]);
-            if (method_exists($this, $subHandler)) {
-                array_shift($params);
-                return $this->$subHandler($params);
+        if (count($path) > 0) {
+            $key = array_keys($path)[0];
+            $subHandler = Inflector::camelize($path[$key]);
+            $subHandler = lcfirst($subHandler);
+            array_shift($path);
+            return $this->{$subHandler}($params, $path);
+        }
+
+//        $token = $params[0];
+//        $readToken = base64_decode($token);
+//        $options = (array) unserialize($readToken);
+//        $what = $options['what'];
+//        $suggestWhat = 'suggest' . Inflector::camelize($what);
+//        array_shift($options);
+//        return $this->{$suggestWhat}($options);
+    }
+
+
+
+    /**
+     * @param array $path
+     * @param array $queryParams
+     * @return array|\Cake\Http\Response
+     */
+    public function threads(array $params)
+    {
+        $response = $this->getController()->getResponse();
+        $actor = $this->getConfig('user');
+        $filter = 'allForUser';
+
+        if (isset($params['cw_aid'])) {
+            $actor = $this->Users->get($params['cw_aid']);
+        }
+        if (isset($params['cw_ftr'])) {
+            $filter = lcfirst(
+                Inflector::camelize($params['cw_ftr'])
+            );
+        }
+
+        if (!$actor instanceof User) {
+            return $response->withStatus(500)->withStringBody('Sorry, unkown user');
+        }
+        $threads = $this->Posts->find($filter, ['actor' => $actor]);
+        $threads = $threads->orderDesc('Posts.id');
+        $arrayTimeline = $threads->toArray();
+        $collection = collection($arrayTimeline);
+
+        $threadedPosts = $collection->each(
+            function (Post $post) {
+                $post->set(
+                    'comments',
+                    $this->Posts->getDescendants($post->refid)
+                );
+                return $post;
+            }
+        );
+
+        $groupedTimeline = $threadedPosts->groupBy(function ($post) {
+            return $post->year;
+        })->toArray();
+
+        $this->getController()->set('account', $actor);
+        $this->getController()->viewBuilder()->setTemplatePath('Posts');
+
+        return $groupedTimeline;
+    }
+
+    public function posts(array $params)
+    {
+        if (isset($params['cw_aid'])) {
+            $cwAid = CustomString::sanitize($params['cw_aid']);
+            $author = $this->Users->get($cwAid);
+            if (!$author instanceof User) {
+                throw new NotFoundException();
             }
         }
-        $token = $params[0];
-        $readToken = base64_decode($token);
-        $options = (array) unserialize($readToken);
-        $what = $options['what'];
-        $suggestWhat = 'suggest' . Inflector::camelize($what);
-        array_shift($options);
-        return $this->{$suggestWhat}($options);
+        if (isset($params['cw_uid'])) {
+            $cwUid = CustomString::sanitize($params['cw_uid']);
+            $user = $this->Users->get($cwUid);
+            if (!$user instanceof User) {
+                throw new NotFoundException();
+            }
+        }
+        $finder = 'all';
+        $filter = null;
+        if (isset($params['cw_fdr'])) {
+            $finder = CustomString::sanitize($params['cw_fdr']);
+            $finder = lcfirst(Inflector::camelize($finder));
+        }
+        if (isset($params['cw_ftr'])) {
+            $filter = CustomString::sanitize($params['cw_ftr']);
+            $filter = lcfirst(Inflector::camelize($filter));
+        }
+        $options = [];
+        if (isset($author)) {
+            $options['author'] = $author;
+        }
+        if (isset($user)) {
+            $options['user'] = $user;
+        }
+        
+        $posts = $this->Posts->find($finder, $options);
+//        debug($posts);
+//        exit;
+        if (!is_null($filter)) {
+            $applyFilter = 'filterBy' . ucfirst($filter);
+            $posts = $this->Posts->{$applyFilter}($posts, $options);
+        }
+        if (!count($posts->getContain())) {
+            $associations = $this->Posts->associations()->keys();
+            $posts = $posts->contain($associations);
+        }
+        
+//        $posts = $this->Posts->findThreaded($posts, [
+//            'keyField' => 'id',
+//            'parentField' => 'ancestor_id',
+//            'nestingKey' => 'children'
+//        ]);
+        if (isset($params['cw_p_y']) && Validation::date($params['cw_p_y'], 'Y')) {
+            $year = $params['cw_p_y'];
+            $posts = $this->Posts->findByYear($posts, ['year' => $year]);
+        }
+
+        $orderBy = 'id';
+        $dir = 'DESC';
+        $sortBy = '';
+        if (isset($params['cw_odr'])) {
+            $orderBy = CustomString::sanitize($params['cw_odr']);
+        }
+        if (isset($params['dir'])) {
+            $dir = CustomString::sanitize($params['dir']);
+        }
+        if (isset($params['sort'])) {
+            $sortBy = CustomString::sanitize($params['sort']);
+        }
+
+        $posts = $posts->order(["Posts.$orderBy" => $dir]);
+        if (!empty($sortBy)) {
+            $posts = $posts->sortBy(function ($post) use($sortBy) {
+                return $post[$sortBy];
+            }, $dir);
+        }
+
+//        if (isset($posts['cw_post_grp'])) {
+//            $posts = $posts->groupBy(function ($post) {
+//                return $post->year;
+//            })->toArray();
+//        }
+
+//        $posts = (new Paginator())->paginate($posts)->toArray();
+
+        return $posts->all();
     }
 
     public function feeds()
@@ -91,7 +231,7 @@ class NewsfeedComponent extends Component
         if (!$actor instanceof User) {
             return $response->withStatus(500)->withStringBody('Sorry, unkown user');
         }
-        $timeline = $this->Newsfeed->getTimeline($actor);
+        $timeline = $this->Newsfeed->fetchAllFor($actor);
 
         $timeline = $timeline->orderAsc('Posts.id');
         $timeline = $this->paginate($timeline);
@@ -144,7 +284,7 @@ class NewsfeedComponent extends Component
     public function extractSingleFieldFromEachArrayItem(array $resultSet, string $field) {
         $IDs = [];
         if (strpos($field, '.'))
-                $field = str_replace('.', '->', $field);
+            $field = str_replace('.', '->', $field);
         (new Collection($resultSet))->each(function($item) use (&$IDs, $field) {
             $IDs[] = $item->$field;
         });
@@ -207,7 +347,8 @@ class NewsfeedComponent extends Component
         $query = $this->Posts->dateFormat($query, 'Posts.date_published');
         $post = $query->first();
         $comments = $this->Posts->getThread(['Posts.replying_to' => $post->refid]);
-        $comments = $this->Posts->dateFormat($comments, 'Posts.date_published')->orderAsc('Posts.id');
+        $comments = $this->Posts->dateFormat($comments, 'Posts.date_published')
+            ->orderAsc('Posts.id');
         $comments = $comments->all()->toArray();
         $post->set('comments', $comments);
 
@@ -218,14 +359,17 @@ class NewsfeedComponent extends Component
      * @param User|null $actor
      * @return array|Query
      */
-    public function getTimeline(User $actor = null, $filter = null, $filterVal = null)
-    {
+    public function fetchAllFor(
+            User $actor = null,
+            $filter = null,
+            $filterVal = null
+    ) {
         if (is_null($actor)) {
             $actor = $this->getController()->getActiveUser();
         }
 
-        if (! $actor instanceof User) {
-            $this->getController()->shutdownProcess();
+        if (!$actor instanceof User) {
+//            $this->getController()->shutdownProcess();
         }
 
         $newsSources = $this->getNewsSources($actor->get('refid'));
@@ -246,7 +390,9 @@ class NewsfeedComponent extends Component
 // Applying filters
         $filterMethod = 'filter' . Inflector::camelize($filter);
         if (method_exists($Posts, $filterMethod)) {
-            $timelineResults = $Posts->{$filterMethod}($actor, $timelineResults, $filterVal, $newsSources);
+            $timelineResults = $Posts->{$filterMethod}(
+                    $actor, $timelineResults, $filterVal, $newsSources
+            );
         }
 
 //        Injecting ads
@@ -304,13 +450,13 @@ class NewsfeedComponent extends Component
             'Posts.replying_to' => $post
         ];
         $children = $this->Posts->find()
-                ->contain([
-                    'Authors' => ['Profiles'],
-                    'OriginalAuthors' => ['Profiles'],
-                    'OriginalPosts' => ['Authors' => ['Profiles']],
-                    'Reactions' => ['Reactors' => ['Profiles']],
-                    'Attachments'
-                ]);
+            ->contain([
+                'Authors' => ['Profiles'],
+                'OriginalAuthors' => ['Profiles'],
+                'OriginalPosts' => ['Authors' => ['Profiles']],
+                'Reactions' => ['Reactors' => ['Profiles']],
+                'Attachments'
+            ]);
 
         if ($options) {
             $conditions += $options;
@@ -361,12 +507,12 @@ class NewsfeedComponent extends Component
         while ($arrIterator->valid()) {
             $row = $arrIterator->current();
             $query = $query
-                    ->orWhere([
-                        'OR' => [
-                            'Posts.author_refid' => $row->feed_refid
-                        ],
-                        'Posts.date_published >=' => $row->created
-                    ]);
+                ->orWhere([
+                    'OR' => [
+                        'Posts.author_refid' => $row->feed_refid
+                    ],
+                    'Posts.date_published >=' => $row->created
+                ]);
             $arrIterator->next();
         };
 //        print_r($query);

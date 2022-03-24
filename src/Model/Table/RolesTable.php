@@ -14,7 +14,7 @@ use Cake\Validation\Validator;
  *
  * @property \App\Model\Table\RolesTable&\Cake\ORM\Association\BelongsTo $ParentRoles
  * @property \App\Model\Table\RolesTable&\Cake\ORM\Association\HasMany $ChildRoles
- * @property \App\Model\Table\UserRolesTable&\Cake\ORM\Association\HasMany $UserRoles
+ * @property \App\Model\Table\ProfilesRolesTable&\Cake\ORM\Association\HasMany $UserRoles
  *
  * @method \App\Model\Entity\Role newEmptyEntity()
  * @method \App\Model\Entity\Role newEntity(array $data, array $options = [])
@@ -61,8 +61,8 @@ class RolesTable extends Table
             'className' => 'Roles',
             'foreignKey' => 'parent_id',
         ]);
-        $this->hasMany('UserRoles', [
-            'foreignKey' => 'role_id',
+        $this->belongsToMany('Profiles', [
+            'joinTable' => 'profiles_roles'
         ]);
     }
 
@@ -125,5 +125,10 @@ class RolesTable extends Table
                 'Industries.slug' => $options['industry']
             ]);
         });
+    }
+
+    public function findByName(string $name)
+    {
+        return $this->find('all')->where(['name' => $name]);
     }
 }

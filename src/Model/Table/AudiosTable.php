@@ -11,20 +11,24 @@ use Cake\Validation\Validator;
 /**
  * Audios Model
  *
- * @method \App\Model\Entity\Audio get($primaryKey, $options = [])
- * @method \App\Model\Entity\Audio newEntity($data = null, array $options = [])
+ * @method \App\Model\Entity\Audio newEmptyEntity()
+ * @method \App\Model\Entity\Audio newEntity(array $data, array $options = [])
  * @method \App\Model\Entity\Audio[] newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\Audio|bool save(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\Audio|bool saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Audio get($primaryKey, $options = [])
+ * @method \App\Model\Entity\Audio findOrCreate($search, ?callable $callback = null, $options = [])
  * @method \App\Model\Entity\Audio patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method \App\Model\Entity\Audio[] patchEntities($entities, array $data, array $options = [])
- * @method \App\Model\Entity\Audio findOrCreate($search, callable $callback = null, $options = [])
+ * @method \App\Model\Entity\Audio[] patchEntities(iterable $entities, array $data, array $options = [])
+ * @method \App\Model\Entity\Audio|false save(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Audio saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Audio[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Audio[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Audio[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Audio[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
  *
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
  */
 class AudiosTable extends Table
 {
-
     /**
      * Initialize method
      *
@@ -52,31 +56,25 @@ class AudiosTable extends Table
     {
         $validator
             ->nonNegativeInteger('id')
-            ->allowEmptyString('id', 'create');
+            ->requirePresence('id', 'create')
+            ->notEmptyString('id');
 
         $validator
             ->scalar('refid')
-            ->requirePresence('refid', 'create')
             ->maxLength('refid', 20)
-            ->allowEmptyString('refid', 'create');
-
-        $validator
-            ->scalar('refkey')
-            ->maxLength('refkey', 8)
-            ->requirePresence('refkey', 'create')
-            ->allowEmptyString('refkey', null);
+            ->allowEmptyString('refid', null, 'create');
 
         $validator
             ->scalar('title')
             ->maxLength('title', 255)
             ->requirePresence('title', 'create')
-            ->allowEmptyString('title', null);
+            ->notEmptyString('title');
 
         $validator
             ->scalar('slug')
             ->maxLength('slug', 255)
             ->requirePresence('slug', 'create')
-            ->allowEmptyString('slug', null);
+            ->notEmptyString('slug');
 
         $validator
             ->scalar('description')
@@ -94,49 +92,10 @@ class AudiosTable extends Table
             ->allowEmptyString('tags');
 
         $validator
-            ->scalar('privacy')
-            ->requirePresence('privacy', 'create')
-            ->allowEmptyString('privacy', null);
-
-        $validator
-            ->scalar('author_location')
-            ->maxLength('author_location', 255)
-            ->allowEmptyString('author_location');
-
-        $validator
-            ->scalar('url')
-            ->maxLength('url', 255)
-            ->requirePresence('url', 'create')
-            ->allowEmptyString('url', null);
-
-        $validator
-            ->scalar('file_mime_type')
-            ->maxLength('file_mime_type', 45)
-            ->requirePresence('file_mime_type', 'create')
-            ->allowEmptyFile('file_mime_type', null);
-
-        $validator
-            ->scalar('audio_type')
-            ->maxLength('audio_type', 100)
-            ->requirePresence('audio_type', 'create')
-            ->allowEmptyString('audio_type', null);
-
-        $validator
             ->scalar('author_refid')
             ->maxLength('author_refid', 20)
             ->requirePresence('author_refid', 'create')
-            ->allowEmptyString('author_refid', null);
-
-        $validator
-            ->scalar('video_refid')
-            ->maxLength('video_refid', 20)
-            ->allowEmptyString('video_refid')
-            ->add('video_refid', 'unique', ['rule' => 'validateUnique', 'provider' => 'table']);
-
-        $validator
-            ->scalar('album_refid')
-            ->maxLength('album_refid', 20)
-            ->allowEmptyString('album_refid');
+            ->notEmptyString('author_refid');
 
         $validator
             ->scalar('genre_refid')
@@ -144,18 +103,55 @@ class AudiosTable extends Table
             ->allowEmptyString('genre_refid');
 
         $validator
-            ->scalar('category_refid')
-            ->maxLength('category_refid', 20)
-            ->allowEmptyString('category_refid');
+            ->scalar('album_refid')
+            ->maxLength('album_refid', 20)
+            ->allowEmptyString('album_refid');
+
+        $validator
+            ->scalar('author_location')
+            ->maxLength('author_location', 255)
+            ->allowEmptyString('author_location');
+
+        $validator
+            ->scalar('categories')
+            ->maxLength('categories', 16777215)
+            ->allowEmptyString('categories');
+
+        $validator
+            ->scalar('url')
+            ->maxLength('url', 255)
+            ->requirePresence('url', 'create')
+            ->notEmptyString('url');
+
+        $validator
+            ->scalar('file_mime_type')
+            ->maxLength('file_mime_type', 45)
+            ->requirePresence('file_mime_type', 'create')
+            ->notEmptyFile('file_mime_type');
+
+        $validator
+            ->scalar('content_type')
+            ->maxLength('content_type', 100)
+            ->requirePresence('content_type', 'create')
+            ->notEmptyString('content_type');
+
+        $validator
+            ->scalar('counterpart_refid')
+            ->maxLength('counterpart_refid', 20)
+            ->allowEmptyString('counterpart_refid')
+            ->add('counterpart_refid', 'unique', ['rule' => 'validateUnique', 'provider' => 'table']);
 
         $validator
             ->dateTime('release_date')
             ->allowEmptyDateTime('release_date');
 
         $validator
+            ->scalar('privacy')
+            ->notEmptyString('privacy');
+
+        $validator
             ->scalar('status')
-            ->requirePresence('status', 'create')
-            ->allowEmptyString('status', null);
+            ->notEmptyString('status');
 
         $validator
             ->boolean('is_debut')
@@ -166,15 +162,26 @@ class AudiosTable extends Table
             ->allowEmptyString('monetize');
 
         $validator
-            ->nonNegativeInteger('total_plays')
+            ->scalar('language')
+            ->maxLength('language', 255)
+            ->allowEmptyString('language');
+
+        $validator
+            ->scalar('orientation')
+            ->allowEmptyString('orientation');
+
+        $validator
+            ->scalar('thumbnail')
+            ->maxLength('thumbnail', 255)
+            ->allowEmptyString('thumbnail');
+
+        $validator
             ->allowEmptyString('total_plays');
 
         $validator
-            ->nonNegativeInteger('number_of_people_played')
             ->allowEmptyString('number_of_people_played');
 
         $validator
-            ->nonNegativeInteger('number_of_downloads')
             ->allowEmptyString('number_of_downloads');
 
         return $validator;
@@ -189,9 +196,14 @@ class AudiosTable extends Table
      */
     public function buildRules(RulesChecker $rules): RulesChecker
     {
-        $rules->add($rules->isUnique(['video_refid']));
+        $rules->add($rules->isUnique(['counterpart_refid']), ['errorField' => 'counterpart_refid']);
 
         return $rules;
+    }
+
+    public function findPublished(Query $query, array $options = [])
+    {
+        return $query->where(['Audios.status' => 'published']);
     }
 
     /**
@@ -209,8 +221,39 @@ class AudiosTable extends Table
      * @param Query $query
      * @param array $options
      */
-    public function findMusic(Query $query, array $options)
+    public function findByType(Query $query, array $options)
     {
-        return $query->where(['audio_type' => 'music']);
+        $query = $query->where(['Audios.audio_type' => $options['type']]);
+        $Videos = $this->getAssociation('Videos')->getTarget();
+        $musicVideos = $Videos->find('byType', ['type' => 'music']);
+        $query->unionAll($musicVideos);
+
+        if (!empty($options)) {
+            $query = $query->applyOptions($options);
+        }
+        return $query;
+    }
+
+    /**
+     * @param Query $query
+     * @param array $options
+     * @return Query
+     */
+    public function findLatest(Query $query, array $options = [])
+    {
+        $latest = $query->newExpr()->between(
+            'Audios.created',
+            new \DateTime('now'),
+            new \DateTime('-7 days')
+        );
+        $result = $query->select(['latest' => $latest])
+            ->enableAutoFields();
+        return $result;
+    }
+
+    public function findTop(Query $query, array $options = [])
+    {
+
+        return $query;
     }
 }

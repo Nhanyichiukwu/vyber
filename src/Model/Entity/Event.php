@@ -1,10 +1,12 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Model\Entity;
 
 use Cake\ORM\Entity;
 
 /**
- * Event Entity
+ * Events Entity
  *
  * @property int $id
  * @property string $refid
@@ -12,19 +14,18 @@ use Cake\ORM\Entity;
  * @property string|null $description
  * @property int|null $event_type_id
  * @property string|null $privacy
- * @property string|resource|null $image
+ * @property string|null $media
  * @property string $user_refid
- * @property string $host_name
+ * @property string $hostname
  * @property string|null $status
- * @property \Cake\I18n\FrozenTime|null $created
- * @property \Cake\I18n\FrozenTime|null $modified
+ * @property \Cake\I18n\FrozenTime $created
+ * @property \Cake\I18n\FrozenTime $modified
  *
- * @property \App\Model\Entity\EventVenue[] $venues
+ * @property \App\Model\Entity\EventType $event_type
  * @property \App\Model\Entity\Guest[] $guests
  */
 class Event extends Entity
 {
-
     /**
      * Fields that can be mass assigned using newEntity() or patchEntity().
      *
@@ -35,18 +36,19 @@ class Event extends Entity
      * @var array
      */
     protected $_accessible = [
+        'id' => true,
         'refid' => true,
         'title' => true,
         'description' => true,
         'event_type_id' => true,
         'privacy' => true,
-        'image' => true,
+        'media' => true,
         'user_refid' => true,
-        'host_name' => true,
+        'hostname' => true,
         'status' => true,
         'created' => true,
         'modified' => true,
-        'venues' => true,
-        'guests' => true
+        'event_type' => true,
+        'guests' => true,
     ];
 }

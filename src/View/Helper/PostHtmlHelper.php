@@ -36,7 +36,7 @@ class PostHtmlHelper extends Helper
 
     public $helpers = ['Html','Url', 'Form'];
 
-    const UPLOAD_DIR = WWW_ROOT . 'uploads' . DS;
+    const UPLOAD_DIR = WWW_ROOT . 'public-files' . DS;
 
 //    public function initialize(array $config) {
 //        parent::initialize($config);
@@ -172,11 +172,11 @@ class PostHtmlHelper extends Helper
                 '</div>';
     }
 
-    public function frameAttachments($attachments) {
+    public function embedAttachments($attachments) {
 ?>
         <?php $attachments = array_chunk($attachments, 2); ?>
         <div class="mt-4 o-hidden post-media-container">
-            <div class="_tqGl post-media-list" data-layout="grid">
+            <div class="_tqGl post-media-list hma8sd2c" data-layout="grid">
                 <?php
                 $max = 4;
                 $pointer = 0;
@@ -190,7 +190,7 @@ class PostHtmlHelper extends Helper
                     ?>
                 <div class="post-media-groups _LFwB _2w5s" data-role="column" data-layout="stack">
                     <?php foreach($items as $attachment): ?>
-                    <div class="media-group _pbe pos-r half-height" role="group" id="m0">
+                    <div class="media-group mpfiqsne pos-r half-height" role="group" id="m<?= $pointer ?>">
                         <div class="mr-2 mt-2 pos-a-r pos-a-t z-9">
                             <div class="align-items-center bdrs-20 bgcH-grey-700
                                  btn cH-grey-300 text-muted d-flex justify-content-center p-0 wh_30" role="button" aria-haspopup="false">
@@ -221,7 +221,7 @@ class PostHtmlHelper extends Helper
         $photoUri = Router::url('/media/' .  $attachment->attachment_refid . '?type=photo&format=' . $ext . '&size=small', true);
 ?>
         <div class="s428vimu" data-media-type="photo">
-            <div class="media-box _kx7 _poYC _3PpE border o-hidden _XZA1 _v6nr"
+            <div class="media-box _kx7 _poYC _3PpE o-hidden _XZA1 _v6nr"
                  style="background-image: url(<?= $this->Url->assetUrl($photoUri, ['fullBase' => true]) ?>);">
                 <?= $this->Html->image($photoUri, ['class' => 'media _Aqj']); ?>
             </div>
@@ -238,7 +238,7 @@ class PostHtmlHelper extends Helper
         $videoUri = Router::url('/media/' .  $attachment->attachment_refid . '?type=video&format=' . $ext . '&controls=true', true);
 ?>
         <div class="s428vimu" data-media-type="video">
-            <div class="media-box _kx7 _poYC _3PpE border o-hidden _XZA1 _v6nr">
+            <div class="media-box _kx7 _poYC _3PpE o-hidden _XZA1 _v6nr">
                 <?php $this->Html->media($videoUri,
                         [ 'type' => 'video', 'fullBase' => true, 'class' => 'media']); ?>
                 <video class="media" src="<?= $videoUri ?>" controls="true">Unsupported!</video>
@@ -424,10 +424,10 @@ class PostHtmlHelper extends Helper
                 <div class="_f3bP2e clearfix">
                     <?php
                     $avatarSize = 'avatar-md';
-                    $bubbleOffset = 'ml-8';
+                    $bubbleOffset = 'offset-1 ps-2';
                     if ($comment->type === 'reply') {
                         $avatarSize = 'avatar-sm';
-                        $bubbleOffset = 'ml-7';
+                        $bubbleOffset = 'offset-1';
                     }
                     ?>
                     <?php if ($includeAttribution): ?>

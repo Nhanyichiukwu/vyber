@@ -25,34 +25,35 @@ class ProfileComponent extends Component
 {
 
     use CellTrait;
-    
+
     /**
      * Default configuration.
      *
      * @var array
      */
     protected $_defaultConfig = [];
-    
+
     /**
      * The user whose profile is being viewed
-     * 
-     * @var \App\Model\Entity\User 
+     *
+     * @var \App\Model\Entity\User
      */
     protected $_profile;
-    
+
     public $components = ['Paginator', 'Cookie', 'PostsManager'];
-    
+
     public $queryParams = [];
-    
-    
-    
 
 
-    public function initialize(array $config) {
+
+
+
+    public function initialize(array $config): void
+    {
         parent::initialize($config);
-        
+
         $tableLocator = new TableLocator();
-        
+
         $this->Users = $tableLocator->get('Users');
         $this->Posts = $tableLocator->get('Posts');
         $this->Playlists = $tableLocator->get('Playlists');
@@ -67,15 +68,15 @@ class ProfileComponent extends Component
         $this->Notifications = $tableLocator->get('Notifications');
         $this->Categories = $tableLocator->get('Categories');
         $this->Genres = $tableLocator->get('Genres');
-        
+
         $this->_queryParamsHook();
     }
-    
-    public function posts() 
+
+    public function posts()
     {
         $request = $this->getController()->getRequest();
         $response = $this->getController()->getResponse();
-        
+
         $query = $this->Posts->find('byAuthor', ['author' => $this->_profile->get('refid')]);
         $offset = 0;
         $limit = 24;
@@ -92,7 +93,7 @@ class ProfileComponent extends Component
             'limit' => $limit
         ];
 //        $result = $this->Paginator->paginate($query, $settings);
-        
+
         if ((int) $request->getQuery('p') >= 2 && $query->count() > $limit) {
             $currentPage = (int) $request->getQuery('p');
             $previousPage = $currentPage - 1;
@@ -113,19 +114,19 @@ class ProfileComponent extends Component
 //                $decoratedResults[$year][] = $decoratedPost;
 //            }
 //        }
-        
+
         return $result;
     }
-    
+
     /**
-     * This method runs upon initialisation, to read the request query parameters  
+     * This method runs upon initialisation, to read the request query parameters
      * and validates its values, before any method is called/executed
-     * 
+     *
      * @return $this
      * @throws BadRequestException
      * @throws RecordNotFoundException
      */
-    protected function _queryParamsHook() 
+    protected function _queryParamsHook()
     {
         $request = $this->getController()->getRequest();
         $base64_encoded = $request->getQuery('token');
@@ -135,15 +136,15 @@ class ProfileComponent extends Component
         $base64_decode = base64_decode($base64_encoded);
         $strToArr = explode('_', $base64_decode);
         $userid = substr($strToArr[1], 0, 20);
-        
+
         try {
             $profile = $this->Users->getUser($userid);
         } catch (RecordNotFoundException $ex) {
             throw $ex;
         }
-        
+
         $this->_profile = $profile;
-        
+
         return $this;
     }
 }

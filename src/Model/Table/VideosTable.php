@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use App\Model\Behavior\CommonBehavior;
 use Cake\Database\Expression\QueryExpression;
 use Cake\ORM\Query;
 use Cake\ORM\RulesChecker;
@@ -13,28 +12,31 @@ use Cake\Validation\Validator;
 /**
  * Videos Model
  *
- * @method \App\Model\Entity\Video get($primaryKey, $options = [])
- * @method \App\Model\Entity\Video newEntity($data = null, array $options = [])
+ * @method \App\Model\Entity\Video newEmptyEntity()
+ * @method \App\Model\Entity\Video newEntity(array $data, array $options = [])
  * @method \App\Model\Entity\Video[] newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\Video|bool save(\Cake\Datasource\EntityInterface $entity, $options = [])
- * @method \App\Model\Entity\Video|bool saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Video get($primaryKey, $options = [])
+ * @method \App\Model\Entity\Video findOrCreate($search, ?callable $callback = null, $options = [])
  * @method \App\Model\Entity\Video patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method \App\Model\Entity\Video[] patchEntities($entities, array $data, array $options = [])
- * @method \App\Model\Entity\Video findOrCreate($search, callable $callback = null, $options = [])
+ * @method \App\Model\Entity\Video[] patchEntities(iterable $entities, array $data, array $options = [])
+ * @method \App\Model\Entity\Video|false save(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Video saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Video[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Video[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Video[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Video[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
  *
  * @mixin \Cake\ORM\Behavior\TimestampBehavior
- * @mixin CommonBehavior
  */
-class VideosTable extends AppTable
+class VideosTable extends Table
 {
-
     /**
      * Initialize method
      *
      * @param array $config The configuration for the Table.
      * @return void
      */
-    public function initialize(array $config):void
+    public function initialize(array $config): void
     {
         parent::initialize($config);
 
@@ -42,12 +44,7 @@ class VideosTable extends AppTable
         $this->setDisplayField('refid');
         $this->setPrimaryKey('refid');
 
-        $this->addBehavior('Timestamp', ['timezone' => 'GMT']);
-        $this->addBehavior('Common');
-
-        $this->hasMany('MediaViews', [
-            'foreignKey' => 'media_refid'
-        ]);
+        $this->addBehavior('Timestamp');
     }
 
     /**
@@ -60,24 +57,25 @@ class VideosTable extends AppTable
     {
         $validator
             ->nonNegativeInteger('id')
-            ->allowEmptyString('id', 'create')
-            ->add('id', 'unique', ['rule' => 'validateUnique', 'provider' => 'table']);
+            ->requirePresence('id', 'create')
+            ->notEmptyString('id');
 
         $validator
             ->scalar('refid')
-            ->requirePresence('refid', 'create')
             ->maxLength('refid', 20)
-            ->allowEmptyString('refid', null);
+            ->allowEmptyString('refid', null, 'create');
 
         $validator
             ->scalar('title')
             ->maxLength('title', 255)
-            ->allowEmptyString('title');
+            ->requirePresence('title', 'create')
+            ->notEmptyString('title');
 
         $validator
             ->scalar('slug')
             ->maxLength('slug', 255)
-            ->allowEmptyString('slug');
+            ->requirePresence('slug', 'create')
+            ->notEmptyString('slug');
 
         $validator
             ->scalar('description')
@@ -95,47 +93,10 @@ class VideosTable extends AppTable
             ->allowEmptyString('tags');
 
         $validator
-            ->scalar('privacy')
-            ->allowEmptyString('privacy');
-
-        $validator
-            ->scalar('author_location')
-            ->maxLength('author_location', 255)
-            ->allowEmptyString('author_location');
-
-        $validator
-            ->scalar('file_path')
-            ->maxLength('file_path', 255)
-            ->requirePresence('file_path', 'create')
-            ->allowEmptyString('file_path', null);
-
-        $validator
-            ->scalar('file_mime_type')
-            ->maxLength('file_mime_type', 45)
-            ->allowEmptyString('file_mime_type');
-
-        $validator
-            ->scalar('video_type')
-            ->maxLength('video_type', 100)
-            ->requirePresence('video_type', 'create')
-            ->allowEmptyString('video_type', null);
-
-        $validator
             ->scalar('author_refid')
             ->maxLength('author_refid', 20)
             ->requirePresence('author_refid', 'create')
-            ->allowEmptyString('author_refid', null);
-
-        $validator
-            ->scalar('audio_refid')
-            ->maxLength('audio_refid', 20)
-            ->allowEmptyString('audio_refid')
-            ->add('audio_refid', 'unique', ['rule' => 'validateUnique', 'provider' => 'table']);
-
-        $validator
-            ->scalar('album_refid')
-            ->maxLength('album_refid', 20)
-            ->allowEmptyString('album_refid');
+            ->notEmptyString('author_refid');
 
         $validator
             ->scalar('genre_refid')
@@ -143,18 +104,55 @@ class VideosTable extends AppTable
             ->allowEmptyString('genre_refid');
 
         $validator
-            ->scalar('category_refid')
-            ->maxLength('category_refid', 20)
-            ->allowEmptyString('category_refid');
+            ->scalar('album_refid')
+            ->maxLength('album_refid', 20)
+            ->allowEmptyString('album_refid');
+
+        $validator
+            ->scalar('author_location')
+            ->maxLength('author_location', 255)
+            ->allowEmptyString('author_location');
+
+        $validator
+            ->scalar('categories')
+            ->maxLength('categories', 16777215)
+            ->allowEmptyString('categories');
+
+        $validator
+            ->scalar('url')
+            ->maxLength('url', 255)
+            ->requirePresence('url', 'create')
+            ->notEmptyString('url');
+
+        $validator
+            ->scalar('file_mime_type')
+            ->maxLength('file_mime_type', 45)
+            ->requirePresence('file_mime_type', 'create')
+            ->notEmptyFile('file_mime_type');
+
+        $validator
+            ->scalar('content_type')
+            ->maxLength('content_type', 100)
+            ->requirePresence('content_type', 'create')
+            ->notEmptyString('content_type');
+
+        $validator
+            ->scalar('counterpart_refid')
+            ->maxLength('counterpart_refid', 20)
+            ->allowEmptyString('counterpart_refid')
+            ->add('counterpart_refid', 'unique', ['rule' => 'validateUnique', 'provider' => 'table']);
 
         $validator
             ->dateTime('release_date')
             ->allowEmptyDateTime('release_date');
 
         $validator
+            ->scalar('privacy')
+            ->notEmptyString('privacy');
+
+        $validator
             ->scalar('status')
-            ->requirePresence('status', 'create')
-            ->allowEmptyString('status', null);
+            ->notEmptyString('status');
 
         $validator
             ->boolean('is_debut')
@@ -165,15 +163,26 @@ class VideosTable extends AppTable
             ->allowEmptyString('monetize');
 
         $validator
-            ->nonNegativeInteger('total_plays')
+            ->scalar('language')
+            ->maxLength('language', 255)
+            ->allowEmptyString('language');
+
+        $validator
+            ->scalar('orientation')
+            ->allowEmptyString('orientation');
+
+        $validator
+            ->scalar('thumbnail')
+            ->maxLength('thumbnail', 255)
+            ->allowEmptyString('thumbnail');
+
+        $validator
             ->allowEmptyString('total_plays');
 
         $validator
-            ->nonNegativeInteger('number_of_people_played')
             ->allowEmptyString('number_of_people_played');
 
         $validator
-            ->nonNegativeInteger('number_of_downloads')
             ->allowEmptyString('number_of_downloads');
 
         return $validator;
@@ -188,17 +197,17 @@ class VideosTable extends AppTable
      */
     public function buildRules(RulesChecker $rules): RulesChecker
     {
-        $rules->add($rules->isUnique(['audio_refid']));
+        $rules->add($rules->isUnique(['counterpart_refid']), ['errorField' => 'counterpart_refid']);
 
         return $rules;
     }
 
-    public function findMusic(Query $query, array $options)
+    public function findByType(Query $query, array $options)
     {
-        $query = $query->where(['Videos.video_type' => 'music']);
-//        if (!empty($options)) {
-//            $query = $query->applyOptions($options);
-//        }
+        $query = $query->where(['Videos.video_type' => $options['type']]);
+        if (!empty($options)) {
+            $query = $query->applyOptions($options);
+        }
         return $query;
     }
 
@@ -238,5 +247,45 @@ class VideosTable extends AppTable
         return $query;
     }
 
+    /**
+     *
+     * @param Query $query
+     * @param array $options
+     */
+    public function findByAuthor(Query $query, array $options)
+    {
+        return $query->where(['author_refid' => $options['author']]);
+    }
 
+    /**
+     *
+     * @param Query $query
+     * @param array $options
+     */
+    public function findMusic(Query $query, array $options)
+    {
+        return $query->where(['Videos.video_type' => 'music']);
+    }
+
+    /**
+     * @param Query $query
+     * @param array $options
+     * @return Query
+     */
+    public function findLatest(Query $query, array $options = [])
+    {
+        $latest = $query->newExpr()->between(
+            'Videos.created',
+            new \DateTime('now'),
+            new \DateTime('-7 days')
+        );
+        $result = $query->select(['latest' => $latest])
+            ->enableAutoFields();
+        return $result;
+    }
+
+    public function findPublished(Query $query, array $options = [])
+    {
+        return $query->where(['Videos.status' => 'published']);
+    }
 }

@@ -45,5 +45,6 @@ class Industry extends Entity
         'child_industries' => true,
         'roles' => true,
         'talent_hub' => true,
+        'profiles' => true,
     ];
 }

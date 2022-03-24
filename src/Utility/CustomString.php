@@ -10,11 +10,22 @@ class CustomString
 {
     public static function sanitize($str = null)
     {
-        $str = htmlentities($str);
+        $str = strip_tags($str, '<span>,<a>,<em>,<i>,<strong>,<b>');
         $str = addslashes($str);
-//        $str = addcslashes($str, '');
-        $str = str_replace("'", "`", $str);
+//        $str = str_replace("'", "`", $str);
         return $str;
+    }
+
+    public static function arraySanitizeRecursive(array $data)
+    {
+        return collection($data)->map(function ($value) {
+            if (is_string($value)) {
+                return static::sanitize($value);
+            } elseif(is_array($value)) {
+                return static::arraySanitizeRecursive($value)->toArray();
+            }
+            return $value;
+        });
     }
 
     /**

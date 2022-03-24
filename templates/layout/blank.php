@@ -26,18 +26,17 @@ if ($hasFooter) {
 <body class="mobile-layout<?= $controlClasses ?>"
       data-app-user=""
       data-base-uri="<?= $baseUri ?>">
-<x-vibely-app-container
-    id="app-container"
-    class="_viG app-container clearfix foa3ulpk d-block w-100 o-hidden">
+<div id="app-container"
+    class="_viG app-container clearfix foa3ulpk d-block w-100 h-100 o-hidden">
     <?php if ($this->fetch('notice')): ?>
-        <x-vibely-noticeboard>
+        <x-cw-noticeboard>
             <?= $this->fetch('notice'); ?>
-        </x-vibely-noticeboard>
+        </x-cw-noticeboard>
     <?php endif; ?>
     <?php if ($this->fetch('overhead_ad')): ?>
-        <x-vibely-ads>
+        <x-cw-ads>
             <?= $this->fetch('overhead_ad'); ?>
-        </x-vibely-ads>
+        </x-cw-ads>
     <?php endif; ?>
     <!-- Main Content -->
     <main id="pageContent"
@@ -50,14 +49,9 @@ if ($hasFooter) {
             <?= $this->fetch('page_header') ?>
         <?php endif; ?>
         <?= $this->fetch('content') ?>
-        <?php
-//        mb_strtolower(
-//            RandomString::generateString(8,'mixed', 'alpha')
-//        );
-        ?>
     </main>
     <!-- /Main Content -->
-</x-vibely-app-container>
+</div>
 <?= $this->element('App/splashscreen') ?>
 <?= $this->element('LayoutElements/foot'); ?>
 </body>

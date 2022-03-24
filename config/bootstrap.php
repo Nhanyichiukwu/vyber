@@ -97,7 +97,7 @@ if (Configure::read('debug')) {
     Configure::write('Cache._cake_model_.duration', '+2 minutes');
     Configure::write('Cache._cake_core_.duration', '+2 minutes');
     // disable router cache during development
-    Configure::write('Cache._cake_routes_.duration', '+2 seconds');
+//    Configure::write('Cache._cake_routes_.duration', '+2 seconds');
 }
 
 /*
@@ -214,18 +214,24 @@ ServerRequest::addDetector('tablet', function ($request) {
 //Inflector::rules('uninflected', ['dontinflectme']);
 
 Configure::write('Site', [
-    'name' => 'Interthriller',
+    'name' => 'CrowdWow',
     'tagline' => 'The world premier and largest entertainers network',
     'slogan' => '',
-    'slug' => 'Interthriller',
-//        'member' => 'thriller',
-    'url' => 'https://thriller.com/',
+    'slug' => 'crowdwow',
+    'shortcode' => 'cw',
+    'url' => 'https://www.crowdwow.com/',
     'description' => '',
     'created' => '',
     'author' => 'Nhanyichiukwu Hopeson Otuosorochiukwu',
     'author_url' => 'https://www.oovrix.com/corporate-info/board/ceo/',
     'author_email' => 'ceo@oovrix.com',
-    'reservedWords' => ['Thriller', 'thriller']
+    'reservedWords' => ['CrowdWow', 'crowdwow'],
+    'company' => [
+        'name' => 'Oovrix',
+        'official_name' => 'Oovrix, Inc.',
+        'website' => 'https://www.oovrix.com/',
+        'overview' => '',
+    ]
 ]);
 Configure::write('User', [
     'NAME_MIN_LENGTH'           => 2,

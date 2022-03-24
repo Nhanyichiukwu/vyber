@@ -11,9 +11,9 @@ use Cake\Validation\Validator;
 /**
  * Profiles Model
  *
- * @property \App\Model\Table\UserGenresTable&\Cake\ORM\Association\HasMany $UserGenres
- * @property \App\Model\Table\UserIndustriesTable&\Cake\ORM\Association\HasMany $UserIndustries
- * @property \App\Model\Table\UserRolesTable&\Cake\ORM\Association\HasMany $UserRoles
+ * @property \App\Model\Table\ProfilesGenresTable&\Cake\ORM\Association\HasMany $UserGenres
+ * @property \App\Model\Table\ProfilesIndustriesTable&\Cake\ORM\Association\HasMany $UserIndustries
+ * @property \App\Model\Table\ProfilesRolesTable&\Cake\ORM\Association\HasMany $UserRoles
  *
  * @method \App\Model\Entity\Profile newEmptyEntity()
  * @method \App\Model\Entity\Profile newEntity(array $data, array $options = [])
@@ -53,14 +53,22 @@ class ProfilesTable extends Table
             'foreignKey' => 'user_refid',
         ]);
 
-        $this->hasMany('UserGenres', [
-            'foreignKey' => 'profile_id',
+        $this->belongsToMany('Industries', [
+            'joinTable' => 'profiles_industries'
         ]);
-        $this->hasMany('UserIndustries', [
-            'foreignKey' => 'profile_id',
+        $this->belongsToMany('Roles', [
+            'joinTable' => 'profiles_roles',
         ]);
-        $this->hasMany('UserRoles', [
-            'foreignKey' => 'profile_id',
+        $this->belongsToMany('Genres', [
+            'joinTable' => 'profiles_genres'
+        ]);
+
+        $this->hasMany('Languages', [
+            'className' => 'ProfilesLanguages'
+        ]);
+
+        $this->hasMany('Educations', [
+            'className' => 'ProfilesEducations'
         ]);
     }
 
@@ -82,10 +90,47 @@ class ProfilesTable extends Table
             ->notEmptyString('user_refid')
             ->add('user_refid', 'unique', ['rule' => 'validateUnique', 'provider' => 'table']);
 
+
         $validator
-            ->scalar('about')
-            ->maxLength('about', 255)
-            ->allowEmptyString('about');
+            ->scalar('gender')
+            ->allowEmptyString('gender');
+
+        $validator
+            ->date('date_of_birth')
+            ->allowEmptyString('date_of_birth');
+
+        $validator
+            ->scalar('relationship')
+            ->allowEmptyString('relationship');
+
+        $validator
+            ->scalar('description')
+            ->maxLength('description', 255)
+            ->allowEmptyString('description');
+
+        $validator
+            ->scalar('bio')
+//            ->maxLength('bio')
+            ->allowEmptyString('bio');
+
+//        $validator
+//            ->scalar('industries')
+////            ->maxLength('bio')
+//            ->allowEmptyString('industries');
+//
+//        $validator
+//            ->scalar('roles')
+////            ->maxLength('bio')
+//            ->allowEmptyString('roles');
+//
+//        $validator
+//            ->scalar('genres')
+////            ->maxLength('bio')
+//            ->allowEmptyString('genres');
+
+        $validator
+            ->boolean('is_hall_of_famer')
+            ->allowEmptyString('is_hall_of_famer');
 
         $validator
             ->scalar('country_of_origin')
@@ -150,11 +195,6 @@ class ProfilesTable extends Table
             ->scalar('skills')
             ->maxLength('skills', 255)
             ->allowEmptyString('skills');
-
-        $validator
-            ->scalar('languages')
-            ->maxLength('languages', 255)
-            ->allowEmptyString('languages');
 
         $validator
             ->scalar('profile_image_url')

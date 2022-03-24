@@ -17,9 +17,9 @@ class TalentsHubController extends AppController
      */
     public function index()
     {
-        $talentsHub = $this->paginate($this->TalentsHub);
-
-        $this->set(compact('talentsHub'));
+//        $talentsHub = $this->paginate($this->TalentsHub);
+//
+//        $this->set(compact('talentsHub'));
     }
 
     /**

@@ -31,6 +31,14 @@
     --font-family-monospace: Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
+/**
+beige;
+lightgoldenrodyellow;
+snow;
+oldlace;
+ivory;
+ */
+
 .bg-blue-lightest {
     background-color: #edf2fa !important;
 }
